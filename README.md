@@ -1,4 +1,4 @@
-# MIDI-over-LAN
+# MIDI over LAN
 
 MIDI over LAN (protocol, Python library, GUI client, ...)
 
@@ -17,6 +17,8 @@ MIDI-over-LAN is a Python library that defines and implements a protocol for sen
 - Allows for computing round trip times between hosts using hello packages.
 - Allows for filtering MIDI data based on device names.
 - GUI client for selecting MIDI devices and output ports (planned feature).
+
+![GUI mockup](./gui_mockup.png "MIDI over LAN GUI")
 
 
 
