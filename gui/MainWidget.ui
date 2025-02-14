@@ -12,8 +12,8 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>586</width>
-    <height>392</height>
+    <width>0</width>
+    <height>0</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -93,14 +93,17 @@
               </disabled>
              </palette>
             </property>
+            <property name="editTriggers">
+             <set>QAbstractItemView::EditTrigger::CurrentChanged|QAbstractItemView::EditTrigger::DoubleClicked|QAbstractItemView::EditTrigger::EditKeyPressed|QAbstractItemView::EditTrigger::SelectedClicked</set>
+            </property>
             <attribute name="horizontalHeaderVisible">
              <bool>true</bool>
             </attribute>
             <attribute name="horizontalHeaderMinimumSectionSize">
-             <number>25</number>
+             <number>100</number>
             </attribute>
             <attribute name="horizontalHeaderDefaultSectionSize">
-             <number>80</number>
+             <number>250</number>
             </attribute>
             <attribute name="horizontalHeaderStretchLastSection">
              <bool>true</bool>
@@ -114,31 +117,6 @@
             <attribute name="verticalHeaderStretchLastSection">
              <bool>false</bool>
             </attribute>
-            <row>
-             <property name="text">
-              <string>0</string>
-             </property>
-            </row>
-            <row>
-             <property name="text">
-              <string>1</string>
-             </property>
-            </row>
-            <row>
-             <property name="text">
-              <string>2</string>
-             </property>
-            </row>
-            <column>
-             <property name="text">
-              <string>Activate</string>
-             </property>
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-            </column>
             <column>
              <property name="text">
               <string>Device Name</string>
@@ -165,60 +143,6 @@
               <set>AlignLeading|AlignVCenter</set>
              </property>
             </column>
-            <item row="0" column="0">
-             <property name="text">
-              <string>☐</string>
-             </property>
-             <property name="textAlignment">
-              <set>AlignCenter</set>
-             </property>
-            </item>
-            <item row="0" column="1">
-             <property name="text">
-              <string>KAWAI CA-901 EP</string>
-             </property>
-            </item>
-            <item row="0" column="2">
-             <property name="text">
-              <string>CA-901 EP</string>
-             </property>
-            </item>
-            <item row="1" column="0">
-             <property name="text">
-              <string>☐</string>
-             </property>
-             <property name="textAlignment">
-              <set>AlignCenter</set>
-             </property>
-            </item>
-            <item row="1" column="1">
-             <property name="text">
-              <string>Arturia MINILAB mkII</string>
-             </property>
-            </item>
-            <item row="1" column="2">
-             <property name="text">
-              <string>MINILAB mkII</string>
-             </property>
-            </item>
-            <item row="2" column="0">
-             <property name="text">
-              <string>☐</string>
-             </property>
-             <property name="textAlignment">
-              <set>AlignCenter</set>
-             </property>
-            </item>
-            <item row="2" column="1">
-             <property name="text">
-              <string>Novation Launchpad Pro mk3</string>
-             </property>
-            </item>
-            <item row="2" column="2">
-             <property name="text">
-              <string>Launchpad Pro mk3</string>
-             </property>
-            </item>
            </widget>
           </item>
           <item row="1" column="0">
@@ -231,9 +155,19 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_LocalOutputPorts_UnSelectAll">
+             <widget class="QPushButton" name="pushButton_LocalOutputPorts_UnselectAll">
               <property name="text">
                <string>&amp;Unselect All</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="pushButton_LocalOutputPorts_Refresh">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh the list of output ports in case a new device is connected.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Re&amp;fresh</string>
               </property>
              </widget>
             </item>
@@ -253,14 +187,14 @@
             <item>
              <widget class="QPushButton" name="pushButton_LocalOutputPorts_Run">
               <property name="text">
-               <string>Run/Rerun</string>
+               <string>&amp;Run</string>
               </property>
              </widget>
             </item>
             <item>
              <widget class="QPushButton" name="pushButton_LocalOutputPorts_Stop">
               <property name="text">
-               <string>Stop</string>
+               <string>&amp;Stop</string>
               </property>
              </widget>
             </item>
@@ -488,7 +422,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <tabstop>tabWidget</tabstop>
   <tabstop>tableWidget_LocalOutputPorts</tabstop>
   <tabstop>pushButton_LocalOutputPorts_SelectAll</tabstop>
-  <tabstop>pushButton_LocalOutputPorts_UnSelectAll</tabstop>
+  <tabstop>pushButton_LocalOutputPorts_UnselectAll</tabstop>
  </tabstops>
  <resources/>
  <connections/>
