@@ -31,13 +31,13 @@
       </attribute>
       <layout class="QGridLayout" name="gridLayout_3">
        <item row="0" column="0">
-        <widget class="QGroupBox" name="groupBox_LocalOutputPorts">
+        <widget class="QGroupBox" name="groupBox_LocalInputDevices">
          <property name="title">
-          <string>Local Output Ports</string>
+          <string>Local Input Devices</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
           <item row="0" column="0">
-           <widget class="QTableWidget" name="tableWidget_LocalOutputPorts">
+           <widget class="QTableWidget" name="tableWidget_LocalInputPorts">
             <property name="palette">
              <palette>
               <active>
@@ -148,21 +148,21 @@
           <item row="1" column="0">
            <layout class="QHBoxLayout" name="horizontalLayout">
             <item>
-             <widget class="QPushButton" name="pushButton_LocalOutputPorts_SelectAll">
+             <widget class="QPushButton" name="pushButton_LocalInputPorts_SelectAll">
               <property name="text">
                <string>Select &amp;All</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_LocalOutputPorts_UnselectAll">
+             <widget class="QPushButton" name="pushButton_LocalInputPorts_UnselectAll">
               <property name="text">
                <string>&amp;Unselect All</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_LocalOutputPorts_Refresh">
+             <widget class="QPushButton" name="pushButton_LocalInputPorts_Refresh">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh the list of output ports in case a new device is connected.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
@@ -185,14 +185,14 @@
              </spacer>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_LocalOutputPorts_Run">
+             <widget class="QPushButton" name="pushButton_LocalInputPorts_Run">
               <property name="text">
                <string>&amp;Run</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_LocalOutputPorts_Stop">
+             <widget class="QPushButton" name="pushButton_LocalInputPorts_Stop">
               <property name="text">
                <string>&amp;Stop</string>
               </property>
@@ -420,9 +420,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
  </widget>
  <tabstops>
   <tabstop>tabWidget</tabstop>
-  <tabstop>tableWidget_LocalOutputPorts</tabstop>
-  <tabstop>pushButton_LocalOutputPorts_SelectAll</tabstop>
-  <tabstop>pushButton_LocalOutputPorts_UnselectAll</tabstop>
+  <tabstop>tableWidget_LocalInputPorts</tabstop>
+  <tabstop>pushButton_LocalInputPorts_SelectAll</tabstop>
+  <tabstop>pushButton_LocalInputPorts_UnselectAll</tabstop>
  </tabstops>
  <resources/>
  <connections/>

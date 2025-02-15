@@ -34,24 +34,24 @@ class Ui_MainWidget(object):
         self.tab_OutgoingTraffic.setObjectName(u"tab_OutgoingTraffic")
         self.gridLayout_3 = QGridLayout(self.tab_OutgoingTraffic)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.groupBox_LocalOutputPorts = QGroupBox(self.tab_OutgoingTraffic)
-        self.groupBox_LocalOutputPorts.setObjectName(u"groupBox_LocalOutputPorts")
-        self.gridLayout = QGridLayout(self.groupBox_LocalOutputPorts)
+        self.groupBox_LocalInputDevices = QGroupBox(self.tab_OutgoingTraffic)
+        self.groupBox_LocalInputDevices.setObjectName(u"groupBox_LocalInputDevices")
+        self.gridLayout = QGridLayout(self.groupBox_LocalInputDevices)
         self.gridLayout.setObjectName(u"gridLayout")
-        self.tableWidget_LocalOutputPorts = QTableWidget(self.groupBox_LocalOutputPorts)
-        if (self.tableWidget_LocalOutputPorts.columnCount() < 2):
-            self.tableWidget_LocalOutputPorts.setColumnCount(2)
+        self.tableWidget_LocalInputPorts = QTableWidget(self.groupBox_LocalInputDevices)
+        if (self.tableWidget_LocalInputPorts.columnCount() < 2):
+            self.tableWidget_LocalInputPorts.setColumnCount(2)
         font = QFont()
         font.setBold(True)
         __qtablewidgetitem = QTableWidgetItem()
         __qtablewidgetitem.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
         __qtablewidgetitem.setFont(font);
-        self.tableWidget_LocalOutputPorts.setHorizontalHeaderItem(0, __qtablewidgetitem)
+        self.tableWidget_LocalInputPorts.setHorizontalHeaderItem(0, __qtablewidgetitem)
         __qtablewidgetitem1 = QTableWidgetItem()
         __qtablewidgetitem1.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
         __qtablewidgetitem1.setFont(font);
-        self.tableWidget_LocalOutputPorts.setHorizontalHeaderItem(1, __qtablewidgetitem1)
-        self.tableWidget_LocalOutputPorts.setObjectName(u"tableWidget_LocalOutputPorts")
+        self.tableWidget_LocalInputPorts.setHorizontalHeaderItem(1, __qtablewidgetitem1)
+        self.tableWidget_LocalInputPorts.setObjectName(u"tableWidget_LocalInputPorts")
         palette = QPalette()
         brush = QBrush(QColor(0, 218, 105, 255))
         brush.setStyle(Qt.SolidPattern)
@@ -60,50 +60,50 @@ class Ui_MainWidget(object):
         palette.setBrush(QPalette.Inactive, QPalette.Highlight, brush)
         palette.setBrush(QPalette.Inactive, QPalette.Accent, brush)
         palette.setBrush(QPalette.Disabled, QPalette.Accent, brush)
-        self.tableWidget_LocalOutputPorts.setPalette(palette)
-        self.tableWidget_LocalOutputPorts.setEditTriggers(QAbstractItemView.EditTrigger.CurrentChanged|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed|QAbstractItemView.EditTrigger.SelectedClicked)
-        self.tableWidget_LocalOutputPorts.horizontalHeader().setVisible(True)
-        self.tableWidget_LocalOutputPorts.horizontalHeader().setMinimumSectionSize(100)
-        self.tableWidget_LocalOutputPorts.horizontalHeader().setDefaultSectionSize(250)
-        self.tableWidget_LocalOutputPorts.horizontalHeader().setStretchLastSection(True)
-        self.tableWidget_LocalOutputPorts.verticalHeader().setVisible(False)
-        self.tableWidget_LocalOutputPorts.verticalHeader().setHighlightSections(False)
-        self.tableWidget_LocalOutputPorts.verticalHeader().setStretchLastSection(False)
+        self.tableWidget_LocalInputPorts.setPalette(palette)
+        self.tableWidget_LocalInputPorts.setEditTriggers(QAbstractItemView.EditTrigger.CurrentChanged|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed|QAbstractItemView.EditTrigger.SelectedClicked)
+        self.tableWidget_LocalInputPorts.horizontalHeader().setVisible(True)
+        self.tableWidget_LocalInputPorts.horizontalHeader().setMinimumSectionSize(100)
+        self.tableWidget_LocalInputPorts.horizontalHeader().setDefaultSectionSize(250)
+        self.tableWidget_LocalInputPorts.horizontalHeader().setStretchLastSection(True)
+        self.tableWidget_LocalInputPorts.verticalHeader().setVisible(False)
+        self.tableWidget_LocalInputPorts.verticalHeader().setHighlightSections(False)
+        self.tableWidget_LocalInputPorts.verticalHeader().setStretchLastSection(False)
 
-        self.gridLayout.addWidget(self.tableWidget_LocalOutputPorts, 0, 0, 1, 1)
+        self.gridLayout.addWidget(self.tableWidget_LocalInputPorts, 0, 0, 1, 1)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.pushButton_LocalOutputPorts_SelectAll = QPushButton(self.groupBox_LocalOutputPorts)
-        self.pushButton_LocalOutputPorts_SelectAll.setObjectName(u"pushButton_LocalOutputPorts_SelectAll")
+        self.pushButton_LocalInputPorts_SelectAll = QPushButton(self.groupBox_LocalInputDevices)
+        self.pushButton_LocalInputPorts_SelectAll.setObjectName(u"pushButton_LocalInputPorts_SelectAll")
 
-        self.horizontalLayout.addWidget(self.pushButton_LocalOutputPorts_SelectAll)
+        self.horizontalLayout.addWidget(self.pushButton_LocalInputPorts_SelectAll)
 
-        self.pushButton_LocalOutputPorts_UnselectAll = QPushButton(self.groupBox_LocalOutputPorts)
-        self.pushButton_LocalOutputPorts_UnselectAll.setObjectName(u"pushButton_LocalOutputPorts_UnselectAll")
+        self.pushButton_LocalInputPorts_UnselectAll = QPushButton(self.groupBox_LocalInputDevices)
+        self.pushButton_LocalInputPorts_UnselectAll.setObjectName(u"pushButton_LocalInputPorts_UnselectAll")
 
-        self.horizontalLayout.addWidget(self.pushButton_LocalOutputPorts_UnselectAll)
+        self.horizontalLayout.addWidget(self.pushButton_LocalInputPorts_UnselectAll)
 
-        self.pushButton_LocalOutputPorts_Refresh = QPushButton(self.groupBox_LocalOutputPorts)
-        self.pushButton_LocalOutputPorts_Refresh.setObjectName(u"pushButton_LocalOutputPorts_Refresh")
+        self.pushButton_LocalInputPorts_Refresh = QPushButton(self.groupBox_LocalInputDevices)
+        self.pushButton_LocalInputPorts_Refresh.setObjectName(u"pushButton_LocalInputPorts_Refresh")
 
-        self.horizontalLayout.addWidget(self.pushButton_LocalOutputPorts_Refresh)
+        self.horizontalLayout.addWidget(self.pushButton_LocalInputPorts_Refresh)
 
         self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
-        self.pushButton_LocalOutputPorts_Run = QPushButton(self.groupBox_LocalOutputPorts)
-        self.pushButton_LocalOutputPorts_Run.setObjectName(u"pushButton_LocalOutputPorts_Run")
+        self.pushButton_LocalInputPorts_Run = QPushButton(self.groupBox_LocalInputDevices)
+        self.pushButton_LocalInputPorts_Run.setObjectName(u"pushButton_LocalInputPorts_Run")
 
-        self.horizontalLayout.addWidget(self.pushButton_LocalOutputPorts_Run)
+        self.horizontalLayout.addWidget(self.pushButton_LocalInputPorts_Run)
 
-        self.pushButton_LocalOutputPorts_Stop = QPushButton(self.groupBox_LocalOutputPorts)
-        self.pushButton_LocalOutputPorts_Stop.setObjectName(u"pushButton_LocalOutputPorts_Stop")
+        self.pushButton_LocalInputPorts_Stop = QPushButton(self.groupBox_LocalInputDevices)
+        self.pushButton_LocalInputPorts_Stop.setObjectName(u"pushButton_LocalInputPorts_Stop")
 
-        self.horizontalLayout.addWidget(self.pushButton_LocalOutputPorts_Stop)
+        self.horizontalLayout.addWidget(self.pushButton_LocalInputPorts_Stop)
 
-        self.radioButton = QRadioButton(self.groupBox_LocalOutputPorts)
+        self.radioButton = QRadioButton(self.groupBox_LocalInputDevices)
         self.radioButton.setObjectName(u"radioButton")
 
         self.horizontalLayout.addWidget(self.radioButton)
@@ -112,7 +112,7 @@ class Ui_MainWidget(object):
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
 
-        self.gridLayout_3.addWidget(self.groupBox_LocalOutputPorts, 0, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.groupBox_LocalInputDevices, 0, 0, 1, 1)
 
         self.tabWidget.addTab(self.tab_OutgoingTraffic, "")
         self.tab_IncomingTraffic = QWidget()
@@ -194,9 +194,9 @@ class Ui_MainWidget(object):
 
         self.gridLayout_2.addWidget(self.tabWidget, 0, 0, 1, 1)
 
-        QWidget.setTabOrder(self.tabWidget, self.tableWidget_LocalOutputPorts)
-        QWidget.setTabOrder(self.tableWidget_LocalOutputPorts, self.pushButton_LocalOutputPorts_SelectAll)
-        QWidget.setTabOrder(self.pushButton_LocalOutputPorts_SelectAll, self.pushButton_LocalOutputPorts_UnselectAll)
+        QWidget.setTabOrder(self.tabWidget, self.tableWidget_LocalInputPorts)
+        QWidget.setTabOrder(self.tableWidget_LocalInputPorts, self.pushButton_LocalInputPorts_SelectAll)
+        QWidget.setTabOrder(self.pushButton_LocalInputPorts_SelectAll, self.pushButton_LocalInputPorts_UnselectAll)
 
         self.retranslateUi(MainWidget)
 
@@ -208,19 +208,19 @@ class Ui_MainWidget(object):
 
     def retranslateUi(self, MainWidget):
         MainWidget.setWindowTitle(QCoreApplication.translate("MainWidget", u"MIDI over LAN", None))
-        self.groupBox_LocalOutputPorts.setTitle(QCoreApplication.translate("MainWidget", u"Local Output Ports", None))
-        ___qtablewidgetitem = self.tableWidget_LocalOutputPorts.horizontalHeaderItem(0)
+        self.groupBox_LocalInputDevices.setTitle(QCoreApplication.translate("MainWidget", u"Local Input Devices", None))
+        ___qtablewidgetitem = self.tableWidget_LocalInputPorts.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("MainWidget", u"Device Name", None));
-        ___qtablewidgetitem1 = self.tableWidget_LocalOutputPorts.horizontalHeaderItem(1)
+        ___qtablewidgetitem1 = self.tableWidget_LocalInputPorts.horizontalHeaderItem(1)
         ___qtablewidgetitem1.setText(QCoreApplication.translate("MainWidget", u"Network Name", None));
-        self.pushButton_LocalOutputPorts_SelectAll.setText(QCoreApplication.translate("MainWidget", u"Select &All", None))
-        self.pushButton_LocalOutputPorts_UnselectAll.setText(QCoreApplication.translate("MainWidget", u"&Unselect All", None))
+        self.pushButton_LocalInputPorts_SelectAll.setText(QCoreApplication.translate("MainWidget", u"Select &All", None))
+        self.pushButton_LocalInputPorts_UnselectAll.setText(QCoreApplication.translate("MainWidget", u"&Unselect All", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_LocalOutputPorts_Refresh.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>Refresh the list of output ports in case a new device is connected.</p></body></html>", None))
+        self.pushButton_LocalInputPorts_Refresh.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>Refresh the list of output ports in case a new device is connected.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
-        self.pushButton_LocalOutputPorts_Refresh.setText(QCoreApplication.translate("MainWidget", u"Re&fresh", None))
-        self.pushButton_LocalOutputPorts_Run.setText(QCoreApplication.translate("MainWidget", u"&Run", None))
-        self.pushButton_LocalOutputPorts_Stop.setText(QCoreApplication.translate("MainWidget", u"&Stop", None))
+        self.pushButton_LocalInputPorts_Refresh.setText(QCoreApplication.translate("MainWidget", u"Re&fresh", None))
+        self.pushButton_LocalInputPorts_Run.setText(QCoreApplication.translate("MainWidget", u"&Run", None))
+        self.pushButton_LocalInputPorts_Stop.setText(QCoreApplication.translate("MainWidget", u"&Stop", None))
         self.radioButton.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_OutgoingTraffic), QCoreApplication.translate("MainWidget", u"Outgoing Traffic", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_IncomingTraffic), QCoreApplication.translate("MainWidget", u"Incoming Traffic", None))
