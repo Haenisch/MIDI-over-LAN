@@ -15,16 +15,17 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QFrame, QGridLayout,
-    QGroupBox, QHBoxLayout, QHeaderView, QPushButton,
-    QRadioButton, QSizePolicy, QSpacerItem, QTabWidget,
-    QTableWidget, QTableWidgetItem, QTextEdit, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QFrame,
+    QGridLayout, QGroupBox, QHBoxLayout, QHeaderView,
+    QLabel, QLineEdit, QPushButton, QSizePolicy,
+    QSpacerItem, QTabWidget, QTableWidget, QTableWidgetItem,
+    QTextEdit, QVBoxLayout, QWidget)
 
 class Ui_MainWidget(object):
     def setupUi(self, MainWidget):
         if not MainWidget.objectName():
             MainWidget.setObjectName(u"MainWidget")
-        MainWidget.resize(586, 392)
+        MainWidget.resize(586, 513)
         MainWidget.setMinimumSize(QSize(0, 0))
         self.gridLayout_2 = QGridLayout(MainWidget)
         self.gridLayout_2.setObjectName(u"gridLayout_2")
@@ -32,8 +33,8 @@ class Ui_MainWidget(object):
         self.tabWidget.setObjectName(u"tabWidget")
         self.tab_OutgoingTraffic = QWidget()
         self.tab_OutgoingTraffic.setObjectName(u"tab_OutgoingTraffic")
-        self.gridLayout_3 = QGridLayout(self.tab_OutgoingTraffic)
-        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.verticalLayout_2 = QVBoxLayout(self.tab_OutgoingTraffic)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.groupBox_LocalInputDevices = QGroupBox(self.tab_OutgoingTraffic)
         self.groupBox_LocalInputDevices.setObjectName(u"groupBox_LocalInputDevices")
         self.gridLayout = QGridLayout(self.groupBox_LocalInputDevices)
@@ -93,26 +94,125 @@ class Ui_MainWidget(object):
 
         self.horizontalLayout.addItem(self.horizontalSpacer)
 
-        self.pushButton_LocalInputPorts_Run = QPushButton(self.groupBox_LocalInputDevices)
-        self.pushButton_LocalInputPorts_Run.setObjectName(u"pushButton_LocalInputPorts_Run")
-
-        self.horizontalLayout.addWidget(self.pushButton_LocalInputPorts_Run)
-
-        self.pushButton_LocalInputPorts_Stop = QPushButton(self.groupBox_LocalInputDevices)
-        self.pushButton_LocalInputPorts_Stop.setObjectName(u"pushButton_LocalInputPorts_Stop")
-
-        self.horizontalLayout.addWidget(self.pushButton_LocalInputPorts_Stop)
-
-        self.radioButton = QRadioButton(self.groupBox_LocalInputDevices)
-        self.radioButton.setObjectName(u"radioButton")
-
-        self.horizontalLayout.addWidget(self.radioButton)
-
 
         self.gridLayout.addLayout(self.horizontalLayout, 1, 0, 1, 1)
 
 
-        self.gridLayout_3.addWidget(self.groupBox_LocalInputDevices, 0, 0, 1, 1)
+        self.verticalLayout_2.addWidget(self.groupBox_LocalInputDevices)
+
+        self.groupBox_Server_OutgoingTraffic = QGroupBox(self.tab_OutgoingTraffic)
+        self.groupBox_Server_OutgoingTraffic.setObjectName(u"groupBox_Server_OutgoingTraffic")
+        self.verticalLayout = QVBoxLayout(self.groupBox_Server_OutgoingTraffic)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.label_OutgoingTraffic_NetworkInterface = QLabel(self.groupBox_Server_OutgoingTraffic)
+        self.label_OutgoingTraffic_NetworkInterface.setObjectName(u"label_OutgoingTraffic_NetworkInterface")
+        self.label_OutgoingTraffic_NetworkInterface.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.gridLayout_3.addWidget(self.label_OutgoingTraffic_NetworkInterface, 0, 0, 1, 1)
+
+        self.lineEdit_OutgoingTraffic_NetworkInterface = QLineEdit(self.groupBox_Server_OutgoingTraffic)
+        self.lineEdit_OutgoingTraffic_NetworkInterface.setObjectName(u"lineEdit_OutgoingTraffic_NetworkInterface")
+        self.lineEdit_OutgoingTraffic_NetworkInterface.setMinimumSize(QSize(150, 0))
+
+        self.gridLayout_3.addWidget(self.lineEdit_OutgoingTraffic_NetworkInterface, 0, 1, 1, 1)
+
+        self.label_OutgoingTraffic_MulticastGroupAddress = QLabel(self.groupBox_Server_OutgoingTraffic)
+        self.label_OutgoingTraffic_MulticastGroupAddress.setObjectName(u"label_OutgoingTraffic_MulticastGroupAddress")
+        self.label_OutgoingTraffic_MulticastGroupAddress.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.gridLayout_3.addWidget(self.label_OutgoingTraffic_MulticastGroupAddress, 1, 0, 1, 1)
+
+        self.lineEdit_OutgoingTraffic_MulticastGroupAddress = QLineEdit(self.groupBox_Server_OutgoingTraffic)
+        self.lineEdit_OutgoingTraffic_MulticastGroupAddress.setObjectName(u"lineEdit_OutgoingTraffic_MulticastGroupAddress")
+        self.lineEdit_OutgoingTraffic_MulticastGroupAddress.setEnabled(False)
+        self.lineEdit_OutgoingTraffic_MulticastGroupAddress.setMinimumSize(QSize(150, 0))
+
+        self.gridLayout_3.addWidget(self.lineEdit_OutgoingTraffic_MulticastGroupAddress, 1, 1, 1, 1)
+
+        self.label_OutgoingTraffic_MulticastPortNumber = QLabel(self.groupBox_Server_OutgoingTraffic)
+        self.label_OutgoingTraffic_MulticastPortNumber.setObjectName(u"label_OutgoingTraffic_MulticastPortNumber")
+        self.label_OutgoingTraffic_MulticastPortNumber.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.gridLayout_3.addWidget(self.label_OutgoingTraffic_MulticastPortNumber, 2, 0, 1, 1)
+
+        self.lineEdit_OutgoingTraffic_MulticastPortNumber = QLineEdit(self.groupBox_Server_OutgoingTraffic)
+        self.lineEdit_OutgoingTraffic_MulticastPortNumber.setObjectName(u"lineEdit_OutgoingTraffic_MulticastPortNumber")
+        self.lineEdit_OutgoingTraffic_MulticastPortNumber.setEnabled(False)
+        self.lineEdit_OutgoingTraffic_MulticastPortNumber.setMinimumSize(QSize(150, 0))
+
+        self.gridLayout_3.addWidget(self.lineEdit_OutgoingTraffic_MulticastPortNumber, 2, 1, 1, 1)
+
+        self.verticalSpacer_4 = QSpacerItem(20, 13, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+
+        self.gridLayout_3.addItem(self.verticalSpacer_4, 3, 0, 1, 1)
+
+        self.label_OutgoingTraffic_EnableLoopback = QLabel(self.groupBox_Server_OutgoingTraffic)
+        self.label_OutgoingTraffic_EnableLoopback.setObjectName(u"label_OutgoingTraffic_EnableLoopback")
+        self.label_OutgoingTraffic_EnableLoopback.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.gridLayout_3.addWidget(self.label_OutgoingTraffic_EnableLoopback, 4, 0, 1, 1)
+
+        self.checkBox_OutgoingTraffic_EnableLoopback = QCheckBox(self.groupBox_Server_OutgoingTraffic)
+        self.checkBox_OutgoingTraffic_EnableLoopback.setObjectName(u"checkBox_OutgoingTraffic_EnableLoopback")
+
+        self.gridLayout_3.addWidget(self.checkBox_OutgoingTraffic_EnableLoopback, 4, 1, 1, 1)
+
+        self.label_OutgoingTraffic_IgnoreMidiClock = QLabel(self.groupBox_Server_OutgoingTraffic)
+        self.label_OutgoingTraffic_IgnoreMidiClock.setObjectName(u"label_OutgoingTraffic_IgnoreMidiClock")
+        self.label_OutgoingTraffic_IgnoreMidiClock.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
+
+        self.gridLayout_3.addWidget(self.label_OutgoingTraffic_IgnoreMidiClock, 5, 0, 1, 1)
+
+        self.checkBox_OutgoingTraffic_IgnoreMidiClock = QCheckBox(self.groupBox_Server_OutgoingTraffic)
+        self.checkBox_OutgoingTraffic_IgnoreMidiClock.setObjectName(u"checkBox_OutgoingTraffic_IgnoreMidiClock")
+
+        self.gridLayout_3.addWidget(self.checkBox_OutgoingTraffic_IgnoreMidiClock, 5, 1, 1, 1)
+
+
+        self.verticalLayout.addLayout(self.gridLayout_3)
+
+        self.verticalSpacer_3 = QSpacerItem(20, 13, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+
+        self.verticalLayout.addItem(self.verticalSpacer_3)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.pushButton_OutgoingTraffic_Run = QPushButton(self.groupBox_Server_OutgoingTraffic)
+        self.pushButton_OutgoingTraffic_Run.setObjectName(u"pushButton_OutgoingTraffic_Run")
+
+        self.horizontalLayout_2.addWidget(self.pushButton_OutgoingTraffic_Run)
+
+        self.pushButton_OutgoingTraffic_Stop = QPushButton(self.groupBox_Server_OutgoingTraffic)
+        self.pushButton_OutgoingTraffic_Stop.setObjectName(u"pushButton_OutgoingTraffic_Stop")
+
+        self.horizontalLayout_2.addWidget(self.pushButton_OutgoingTraffic_Stop)
+
+        self.horizontalSpacer_5 = QSpacerItem(3, 19, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_5)
+
+        self.label_OutgoingTraffic_ServerStatus = QLabel(self.groupBox_Server_OutgoingTraffic)
+        self.label_OutgoingTraffic_ServerStatus.setObjectName(u"label_OutgoingTraffic_ServerStatus")
+        sizePolicy = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_OutgoingTraffic_ServerStatus.sizePolicy().hasHeightForWidth())
+        self.label_OutgoingTraffic_ServerStatus.setSizePolicy(sizePolicy)
+        self.label_OutgoingTraffic_ServerStatus.setMinimumSize(QSize(20, 20))
+        self.label_OutgoingTraffic_ServerStatus.setMaximumSize(QSize(20, 20))
+        self.label_OutgoingTraffic_ServerStatus.setStyleSheet(u"background-color: red;\n"
+"border: 1px solid gray;\n"
+"border-radius: 10px;")
+
+        self.horizontalLayout_2.addWidget(self.label_OutgoingTraffic_ServerStatus)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
+
+
+        self.verticalLayout_2.addWidget(self.groupBox_Server_OutgoingTraffic)
 
         self.tabWidget.addTab(self.tab_OutgoingTraffic, "")
         self.tab_IncomingTraffic = QWidget()
@@ -219,9 +319,38 @@ class Ui_MainWidget(object):
         self.pushButton_LocalInputPorts_Refresh.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>Refresh the list of output ports in case a new device is connected.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_LocalInputPorts_Refresh.setText(QCoreApplication.translate("MainWidget", u"Re&fresh", None))
-        self.pushButton_LocalInputPorts_Run.setText(QCoreApplication.translate("MainWidget", u"&Run", None))
-        self.pushButton_LocalInputPorts_Stop.setText(QCoreApplication.translate("MainWidget", u"&Stop", None))
-        self.radioButton.setText("")
+        self.groupBox_Server_OutgoingTraffic.setTitle(QCoreApplication.translate("MainWidget", u"Server", None))
+        self.label_OutgoingTraffic_NetworkInterface.setText(QCoreApplication.translate("MainWidget", u"Network Interface:", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_OutgoingTraffic_NetworkInterface.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_OutgoingTraffic_NetworkInterface.setText(QCoreApplication.translate("MainWidget", u"default", None))
+        self.label_OutgoingTraffic_MulticastGroupAddress.setText(QCoreApplication.translate("MainWidget", u"Multicast Group Address:", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_OutgoingTraffic_MulticastGroupAddress.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_OutgoingTraffic_MulticastGroupAddress.setText(QCoreApplication.translate("MainWidget", u"239.0.3.250", None))
+        self.label_OutgoingTraffic_MulticastPortNumber.setText(QCoreApplication.translate("MainWidget", u"Multicast Port Number:", None))
+#if QT_CONFIG(tooltip)
+        self.lineEdit_OutgoingTraffic_MulticastPortNumber.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.lineEdit_OutgoingTraffic_MulticastPortNumber.setText(QCoreApplication.translate("MainWidget", u"56129", None))
+#if QT_CONFIG(tooltip)
+        self.label_OutgoingTraffic_EnableLoopback.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>If loopback is enabled, a local client can receive the multicast packets.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.label_OutgoingTraffic_EnableLoopback.setText(QCoreApplication.translate("MainWidget", u"Enable Loopback:", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_OutgoingTraffic_EnableLoopback.setToolTip(QCoreApplication.translate("MainWidget", u"<html><head/><body><p>If loopback is enabled, a local client can receive the multicast packets.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_OutgoingTraffic_EnableLoopback.setText("")
+        self.label_OutgoingTraffic_IgnoreMidiClock.setText(QCoreApplication.translate("MainWidget", u"Ignore MIDI Clock Data:", None))
+#if QT_CONFIG(tooltip)
+        self.checkBox_OutgoingTraffic_IgnoreMidiClock.setToolTip("")
+#endif // QT_CONFIG(tooltip)
+        self.checkBox_OutgoingTraffic_IgnoreMidiClock.setText("")
+        self.pushButton_OutgoingTraffic_Run.setText(QCoreApplication.translate("MainWidget", u"&Run", None))
+        self.pushButton_OutgoingTraffic_Stop.setText(QCoreApplication.translate("MainWidget", u"&Stop", None))
+        self.label_OutgoingTraffic_ServerStatus.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_OutgoingTraffic), QCoreApplication.translate("MainWidget", u"Outgoing Traffic", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_IncomingTraffic), QCoreApplication.translate("MainWidget", u"Incoming Traffic", None))
         self.groupBox_RTT.setTitle(QCoreApplication.translate("MainWidget", u"Round-Trip Times", None))
@@ -237,7 +366,7 @@ class Ui_MainWidget(object):
         ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWidget", u"Lost Packets", None));
         ___qtablewidgetitem7 = self.tableWidget_RTT.verticalHeaderItem(0)
         ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWidget", u"0", None));
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_Statistics), QCoreApplication.translate("MainWidget", u"Statitstics", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_Statistics), QCoreApplication.translate("MainWidget", u"Statistics", None))
         self.textEdit_About.setHtml(QCoreApplication.translate("MainWidget", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"

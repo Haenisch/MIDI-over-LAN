@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# Copyright (c) 2025 Christoph Hänisch.
 # This file is part of the MIDI over LAN project.
 # It is licensed under the GNU Lesser General Public License v3.0.
 # See the LICENSE file for more details.
@@ -126,7 +127,7 @@ def parse_arguments():
 def select_input_port() -> List[str]:
     """Returns a list of MIDI input port names.
 
-    A list of available MIDI devices is shown to the user from which one or mroe
+    A list of available MIDI devices is shown to the user from which one or more
     devices are selected. The device names are then returned.
     
     If no input ports are available, an error message is put out and the
