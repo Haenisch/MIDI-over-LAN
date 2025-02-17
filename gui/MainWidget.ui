@@ -27,7 +27,7 @@
      </property>
      <widget class="QWidget" name="tab_OutgoingTraffic">
       <attribute name="title">
-       <string>Outgoing Traffic</string>
+       <string>&amp;Outgoing Traffic</string>
       </attribute>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
@@ -197,39 +197,16 @@
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <layout class="QGridLayout" name="gridLayout_3">
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_OutgoingTraffic_NetworkInterface">
-              <property name="text">
-               <string>Network Interface:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLineEdit" name="lineEdit_OutgoingTraffic_NetworkInterface">
-              <property name="minimumSize">
-               <size>
-                <width>150</width>
-                <height>0</height>
-               </size>
-              </property>
+            <item row="5" column="1">
+             <widget class="QCheckBox" name="checkBox_OutgoingTraffic_IgnoreMidiClock">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string/>
               </property>
               <property name="text">
-               <string>default</string>
+               <string/>
               </property>
-             </widget>
-            </item>
-            <item row="1" column="0">
-             <widget class="QLabel" name="label_OutgoingTraffic_MulticastGroupAddress">
-              <property name="text">
-               <string>Multicast Group Address:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              <property name="checked">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -260,7 +237,110 @@
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
               </property>
+              <property name="buddy">
+               <cstring>lineEdit_OutgoingTraffic_MulticastPortNumber</cstring>
+              </property>
              </widget>
+            </item>
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_OutgoingTraffic_NetworkInterface">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>&amp;Network Interface:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+              <property name="buddy">
+               <cstring>lineEdit_OutgoingTraffic_NetworkInterface</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QCheckBox" name="checkBox_OutgoingTraffic_EnableLoopback">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If loopback is enabled, a local client can receive the multicast packets.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_OutgoingTraffic_MulticastGroupAddress">
+              <property name="text">
+               <string>Multicast Group Address:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+              <property name="buddy">
+               <cstring>lineEdit_OutgoingTraffic_MulticastGroupAddress</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="label_OutgoingTraffic_IgnoreMidiClock">
+              <property name="text">
+               <string>Ignore MIDI &amp;Clock Data:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+              <property name="buddy">
+               <cstring>checkBox_OutgoingTraffic_IgnoreMidiClock</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="label_OutgoingTraffic_EnableLoopback">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If loopback is enabled, a local client can receive the multicast packets.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Enable &amp;Loopback:</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              </property>
+              <property name="buddy">
+               <cstring>checkBox_OutgoingTraffic_EnableLoopback</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QLineEdit" name="lineEdit_OutgoingTraffic_NetworkInterface">
+              <property name="minimumSize">
+               <size>
+                <width>150</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>default</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <spacer name="verticalSpacer_4">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::Policy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>13</height>
+               </size>
+              </property>
+             </spacer>
             </item>
             <item row="2" column="1">
              <widget class="QLineEdit" name="lineEdit_OutgoingTraffic_MulticastPortNumber">
@@ -281,62 +361,32 @@
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
-             <spacer name="verticalSpacer_4">
-              <property name="orientation">
-               <enum>Qt::Orientation::Vertical</enum>
-              </property>
-              <property name="sizeType">
-               <enum>QSizePolicy::Policy::Fixed</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>13</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item row="4" column="0">
-             <widget class="QLabel" name="label_OutgoingTraffic_EnableLoopback">
+            <item row="6" column="0">
+             <widget class="QLabel" name="label_OutgoingTraffic_SaveCpuTime">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If loopback is enabled, a local client can receive the multicast packets.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When enabled, the worker thread pauses briefly at the end of each loop iteration, significantly reducing CPU load. However, this may introduce some latency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Enable Loopback:</string>
+               <string>Save CPU &amp;time:</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
               </property>
+              <property name="buddy">
+               <cstring>checkBox_OutgoingTraffic_SaveCpuTime</cstring>
+              </property>
              </widget>
             </item>
-            <item row="4" column="1">
-             <widget class="QCheckBox" name="checkBox_OutgoingTraffic_EnableLoopback">
+            <item row="6" column="1">
+             <widget class="QCheckBox" name="checkBox_OutgoingTraffic_SaveCpuTime">
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If loopback is enabled, a local client can receive the multicast packets.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;When enabled, the worker thread pauses briefly at the end of each loop iteration, significantly reducing CPU load. However, this may introduce some latency.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string/>
               </property>
-             </widget>
-            </item>
-            <item row="5" column="0">
-             <widget class="QLabel" name="label_OutgoingTraffic_IgnoreMidiClock">
-              <property name="text">
-               <string>Ignore MIDI Clock Data:</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="5" column="1">
-             <widget class="QCheckBox" name="checkBox_OutgoingTraffic_IgnoreMidiClock">
-              <property name="toolTip">
-               <string/>
-              </property>
-              <property name="text">
-               <string/>
+              <property name="checked">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
@@ -361,16 +411,22 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
-             <widget class="QPushButton" name="pushButton_OutgoingTraffic_Run">
+             <widget class="QPushButton" name="pushButton_OutgoingTraffic_Restart">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Shut down the worker process for outgoing messages and restart it afterwards.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
-               <string>&amp;Run</string>
+               <string>&amp;Restart</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_OutgoingTraffic_Stop">
+             <widget class="QPushButton" name="pushButton_OutgoingTraffic_PauseResume">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pause or resume the worker process for outgoing messages. If the worker is paused, any MIDI messages from local input ports are discarded.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="text">
-               <string>&amp;Stop</string>
+               <string>&amp;Pause/Resume</string>
               </property>
              </widget>
             </item>
@@ -411,7 +467,7 @@
                </size>
               </property>
               <property name="styleSheet">
-               <string notr="true">background-color: red;
+               <string notr="true">background-color: green;
 border: 1px solid gray;
 border-radius: 10px;</string>
               </property>
@@ -429,12 +485,12 @@ border-radius: 10px;</string>
      </widget>
      <widget class="QWidget" name="tab_IncomingTraffic">
       <attribute name="title">
-       <string>Incoming Traffic</string>
+       <string>&amp;Incoming Traffic</string>
       </attribute>
      </widget>
      <widget class="QWidget" name="tab_Statistics">
       <attribute name="title">
-       <string>Statistics</string>
+       <string>&amp;Statistics</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_4">
        <item row="0" column="0">
@@ -638,6 +694,17 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <tabstop>tableWidget_LocalInputPorts</tabstop>
   <tabstop>pushButton_LocalInputPorts_SelectAll</tabstop>
   <tabstop>pushButton_LocalInputPorts_UnselectAll</tabstop>
+  <tabstop>pushButton_LocalInputPorts_Refresh</tabstop>
+  <tabstop>lineEdit_OutgoingTraffic_NetworkInterface</tabstop>
+  <tabstop>lineEdit_OutgoingTraffic_MulticastGroupAddress</tabstop>
+  <tabstop>lineEdit_OutgoingTraffic_MulticastPortNumber</tabstop>
+  <tabstop>checkBox_OutgoingTraffic_EnableLoopback</tabstop>
+  <tabstop>checkBox_OutgoingTraffic_IgnoreMidiClock</tabstop>
+  <tabstop>checkBox_OutgoingTraffic_SaveCpuTime</tabstop>
+  <tabstop>pushButton_OutgoingTraffic_Restart</tabstop>
+  <tabstop>pushButton_OutgoingTraffic_PauseResume</tabstop>
+  <tabstop>textEdit_About</tabstop>
+  <tabstop>tableWidget_RTT</tabstop>
  </tabstops>
  <resources/>
  <connections/>

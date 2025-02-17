@@ -359,7 +359,7 @@ class HelloPacket(Packet):
         for device_name in self.device_names:
             device_name = to_byte_string(device_name, 64)
             data += len(device_name).to_bytes(1, 'big') + device_name
-        return self.header + len(data).to_bytes(1, 'big') + data
+        return data
 
 
 @dataclass
@@ -426,4 +426,4 @@ class HelloReplyPacket(Packet):
         for device_name in self.device_names:
             device_name = to_byte_string(device_name, 64)
             data += len(device_name).to_bytes(1, 'big') + device_name
-        return self.header + len(data).to_bytes(1, 'big') + data
+        return data

@@ -55,6 +55,7 @@ something more meaningful.
 
 import multiprocessing
 import sys
+import time
 from typing import List, Tuple
 
 import mido
@@ -64,12 +65,17 @@ from PySide6.QtWidgets import QTableWidgetItem
 
 import midi_over_lan
 from midi_sender import MidiSender
-from midi_receiver import MidiReceiver
 from worker_messages import Command, CommandMessage, ResultMessage
 
 # To generate the python file from the ui file, run the following command:
 # pyside6-uic .\MainWidget.ui -o MainWidget.py
 from MainWidget import Ui_MainWidget
+
+
+def debug_print(message):
+    """Print the message if the debug flag is set."""
+    if __debug__:
+        print(message)
 
 
 # Create queues for communication between the GUI and the worker processes
@@ -87,7 +93,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         self.setupUi(self)
         self.input_ports: List[Tuple[bool, str, str]] = []  # List of tuples (active, device_name, network_name)
         self.run_sending_process()
-        self.pause_sending_process()
+        self.sender_paused = False
 
 
         # Setup the table widget.
@@ -102,11 +108,12 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         self.pushButton_LocalInputPorts_SelectAll.clicked.connect(self.select_all_input_ports)
         self.pushButton_LocalInputPorts_UnselectAll.clicked.connect(self.unselect_all_input_ports)
         self.pushButton_LocalInputPorts_Refresh.clicked.connect(self.refresh_input_ports)
-        self.pushButton_OutgoingTraffic_Run.clicked.connect(self.rerun_sending_process)
-        self.pushButton_OutgoingTraffic_Stop.clicked.connect(self.stop_sending_process)
+        self.pushButton_OutgoingTraffic_Restart.clicked.connect(self.restart_sending_process)
+        self.pushButton_OutgoingTraffic_PauseResume.clicked.connect(self.pause_and_resume_sending_process)
         self.lineEdit_OutgoingTraffic_NetworkInterface.editingFinished.connect(self.update_network_interface)
         self.checkBox_OutgoingTraffic_EnableLoopback.stateChanged.connect(self.update_loopback)
         self.checkBox_OutgoingTraffic_IgnoreMidiClock.stateChanged.connect(self.update_midi_clock_handling)
+        self.checkBox_OutgoingTraffic_SaveCpuTime.stateChanged.connect(self.update_save_cpu_time)
 
         # Add the input ports to the list.
         self.refresh_input_ports()
@@ -138,6 +145,18 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
     def pause_sending_process(self):
         """Pause the sending process."""
         sender_queue.put(CommandMessage(Command.PAUSE))
+        # Set the style sheet of the label to indicate that the server is paused.
+        self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: red;\nborder: 1px solid gray;\nborder-radius: 10px;")
+
+
+    def pause_and_resume_sending_process(self):
+        """Pause or resume the sending process."""
+        if self.sender_paused:
+            self.resume_sending_process()
+            self.sender_paused = False
+        else:
+            self.pause_sending_process()
+            self.sender_paused = True
 
 
     def refresh_input_ports(self):
@@ -149,15 +168,42 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
             self.add_input_port(False, input_port, input_port)
 
 
+    def restart_sending_process(self):
+        """Shutdown the sending process and restart it."""
+        debug_print('Main: Shutting down the sending process...')
+        # Set the style sheet of the label to indicate that the server is shut down.
+        self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: red;\nborder: 1px solid gray;\nborder-radius: 10px;")
+        self.repaint()
+        if self.sender.is_alive():
+            sender_queue.put(CommandMessage(Command.STOP))
+            self.sender.join()
+        debug_print('Main: Waiting...')
+        time.sleep(1)
+        debug_print('Main: Restart the sending process...')
+        self.sender = MidiSender(sender_queue, result_queue)  # pylint: disable=attribute-defined-outside-init
+        self.sender.start()
+        self.update_midi_clock_handling(self.checkBox_OutgoingTraffic_IgnoreMidiClock.checkState())
+        self.update_loopback(self.checkBox_OutgoingTraffic_EnableLoopback.checkState())
+        self.update_save_cpu_time(self.checkBox_OutgoingTraffic_SaveCpuTime.checkState())
+        self.update_network_interface()
+        self.send_input_ports_to_worker_process()
+        # Set the style sheet of the label to indicate that the server is running.
+        self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
+
+
     def resume_sending_process(self):
         """Resume the sending process."""
         sender_queue.put(CommandMessage(Command.RESUME))
+        # Set the style sheet of the label to indicate that the server is running.
+        self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
 
 
     def run_sending_process(self):
         """Start the sending process."""
         self.sender = MidiSender(sender_queue, result_queue)
         self.sender.start()
+        # Set the style sheet of the label to indicate that the server is running.
+        self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
 
 
     def rerun_sending_process(self, update_network_interface: bool = True):
@@ -169,6 +215,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         self.sender.start()
         self.update_midi_clock_handling(self.checkBox_OutgoingTraffic_IgnoreMidiClock.checkState())
         self.update_loopback(self.checkBox_OutgoingTraffic_EnableLoopback.checkState())
+        self.update_save_cpu_time(self.checkBox_OutgoingTraffic_SaveCpuTime.checkState())
         if update_network_interface:
             self.update_network_interface()
         self.send_input_ports_to_worker_process()
@@ -216,7 +263,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
             else:
                 self.input_ports[row] = (True, device_name, network_name)
                 item.setCheckState(Qt.Checked)
-        self.send_input_ports_to_worker_process()
+            self.send_input_ports_to_worker_process()
 
 
     def unselect_all_input_ports(self):
@@ -252,13 +299,16 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def update_network_interface(self):
         """Update the network interface."""
+        debug_print('Main: Update network interface...')
         text = self.lineEdit_OutgoingTraffic_NetworkInterface.text()
         if text.strip() == "" or text.strip().lower() == "default":
             # Handle the special case of the default network interface. Since
             # the default network interface cannot be set via the
             # socket.setsockopt() function, we have to restart the sender.
-            if self.sender.is_alive():
-                self.rerun_sending_process(update_network_interface=False)
+            # if self.sender.is_alive():
+            #     debug_print('Main: Sender is alive. Rerun it.')
+            #     self.rerun_sending_process(update_network_interface=False)
+            pass
         else:
             sender_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, text))
 
@@ -272,7 +322,18 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
             device_name = self.input_ports[row][1]
             network_name = item.text()
             self.input_ports[row] = (active, device_name, network_name)
-        self.send_input_ports_to_worker_process()
+            self.send_input_ports_to_worker_process()
+
+
+    def update_save_cpu_time(self, state: int):
+        """Update the save CPU time state."""
+        # The state is either of type 'int' and 0 (unchecked) or 2 (checked),
+        # or of type Qt.CheckState and Qt.Unchecked or Qt.Checked.
+        if isinstance(state, int):
+            state = bool(state)
+        else:
+            state = state == Qt.Checked
+        sender_queue.put(CommandMessage(Command.SET_SAVE_CPU_TIME, state))
 
 
 def main():

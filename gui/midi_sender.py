@@ -3,6 +3,9 @@
 # It is licensed under the GNU Lesser General Public License v3.0.
 # See the LICENSE file for more details.
 
+# TODO: Send hello packets to the multicast group to announce the presence of the client
+# TODO: Send warning and error messages to the GUI client
+
 """Worker process for sending MIDI over LAN data (MIDI messages, hello packets, etc.)."""
 
 import multiprocessing
@@ -16,7 +19,7 @@ from warnings import warn
 import mido
 from mido.ports import BasePort
 
-from midi_over_lan import MidiMessagePacket, MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER
+from midi_over_lan import MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER, MidiMessagePacket, HelloPacket
 from worker_messages import Command, CommandMessage
 
 # pylint: disable=line-too-long
@@ -60,7 +63,20 @@ class MidiSender(multiprocessing.Process):
         self.paused = False
         self.midi_input_ports: List[Tuple[str, str]]  = []  # List of tuples (device_name, network_name)
         self.opened_input_ports: List[Tuple[BasePort, str]] = []   # List of tuples (mido port, network_name)
-        self.ignore_midi_clock = False
+        self.ignore_midi_clock = True
+        self.save_cpu_time = True
+        self.timestamp_of_last_hello = None  # time when the last hello packet was sent
+
+
+    def resume_sending_midi_messages(self):
+        """Resume sending MIDI messages."""
+        self.paused = False
+        # Remove all pending MIDI messages
+        i = 0
+        for port, _ in self.opened_input_ports:
+            for _ in port.iter_pending():
+                i += 1
+        debug_print(f"MidiSender: Skipped {i} pending MIDI messages.")
 
 
     def run(self):
@@ -80,7 +96,7 @@ class MidiSender(multiprocessing.Process):
                             self.paused = True
                         case Command.RESUME:
                             debug_print("MidiSender: Resuming...")
-                            self.paused = False
+                            self.resume_sending_midi_messages()
                         case Command.STOP:
                             debug_print("MidiSender: Stopping...")
                             self.running = False
@@ -96,14 +112,39 @@ class MidiSender(multiprocessing.Process):
                         case Command.SET_IGNORE_MIDI_CLOCK:
                             debug_print(f"MidiSender: Ignoring MIDI clock messages ({bool(item.data)})...")
                             self.ignore_midi_clock = bool(item.data)
+                        case Command.SET_SAVE_CPU_TIME:
+                            debug_print(f"MidiSender: Save CPU time ({bool(item.data)})...")
+                            self.save_cpu_time = bool(item.data)
                 except queue.Empty:
                     pass
+
+                self.send_hello_packets()
 
                 if self.paused:
                     time.sleep(0.1)
                     continue
 
                 self.send_midi_messages()
+
+                # Save CPU time with the trade-off of a higher latency
+                if self.save_cpu_time:
+                    time.sleep(0.001)
+
+
+    def send_hello_packets(self):
+        """Send every 10 seconds a hello packet to the multicast group."""
+        now = time.time()
+        timestamp = self.timestamp_of_last_hello
+        if (timestamp is None) or (now - timestamp >= 10):
+            debug_print("MidiSender: Sending 'Hello' packet...")
+            self.timestamp_of_last_hello = now
+            # A 'Hello' packet may contain a list of active device names / input
+            # ports. Send the entire list of active input ports (network names)
+            # to the multicast group. Thus a receiving client can display the
+            # available input ports.
+            device_names = [network_name for _, network_name in self.opened_input_ports]
+            packet = HelloPacket(device_names=device_names)
+            self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
 
 
     def send_midi_messages(self):
@@ -185,4 +226,9 @@ class MidiSender(multiprocessing.Process):
                     warn(f"Could not resolve hostname '{self.network_interface}'. Using the default interface.")
                     self.network_interface = None
                     return
-            self.sock.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, inet_aton(self.network_interface))
+            try:
+                self.sock.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, inet_aton(self.network_interface))
+            except OSError as error:
+                warn(f"Could not set network interface '{self.network_interface}': {error}")
+                self.network_interface = None
+                return

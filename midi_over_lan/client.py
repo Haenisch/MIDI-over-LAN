@@ -25,6 +25,7 @@ import signal
 import socket
 import struct
 import sys
+import time
 
 try:
     import mido
@@ -74,7 +75,8 @@ def is_output_port_open(port_name: str) -> bool:
 def main_loop(interface_ip: str = '',
               midi_output_port: str = None,
               suppress_console_output: bool = False,
-              ignore_clock: bool = False) -> None:
+              ignore_clock: bool = False,
+              save_cpu_time: bool = False) -> None:
     """Main loop for receiving and sending MIDI messages."""
     printv(1, "Setting up MIDI over LAN client...")
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as sock:
@@ -105,6 +107,8 @@ def main_loop(interface_ip: str = '',
             if port:
                 print(f"Sending MIDI messages to {port.name.split(':')[0]}")
             while True:
+                if save_cpu_time:
+                    time.sleep(0.001)
                 with DelayedKeyboardInterrupt():  # prevents KeyboardInterrupt from being raised while receiving data
                     try:
                         data, addr = sock.recvfrom(1024)  # buffer size of 1024 bytes
@@ -173,6 +177,9 @@ def parse_arguments():
     parser.add_argument('-c', '--ignore-clock',
                         action='store_true',
                         help='Ignore MIDI clock messages.')
+    parser.add_argument('-C', '--save-cpu-time',
+                        action='store_true',
+                        help='Save CPU time with the trade-off of a higher latency.')
 
     return parser.parse_args()
 
@@ -226,4 +233,5 @@ if __name__ == "__main__":
     main_loop(interface_ip=args.interface_ip,
               midi_output_port=output_port,
               suppress_console_output=args.suppress_console_output,
-              ignore_clock=args.ignore_clock)
+              ignore_clock=args.ignore_clock,
+              save_cpu_time=args.save_cpu_time)

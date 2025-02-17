@@ -46,6 +46,10 @@ class Command(Enum):
         SET_IGNORE_MIDI_CLOCK:
             objective: Ignore or process MIDI clock messages.
             data: bool
+
+        SET_SAVE_CPU_TIME:
+            objective: If enabled, save CPU time with the trade-off of a higher latency.
+            data: bool
     
     Note:
     
@@ -70,6 +74,7 @@ class Command(Enum):
     SET_NETWORK_INTERFACE = 6
     SET_ENABLE_LOOPBACK_INTERFACE = 7
     SET_IGNORE_MIDI_CLOCK = 8
+    SET_SAVE_CPU_TIME = 9
 
 
 class WorkerMessage(ABC):
