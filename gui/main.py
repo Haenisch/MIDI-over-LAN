@@ -92,8 +92,9 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         super().__init__()
         self.setupUi(self)
         self.input_ports: List[Tuple[bool, str, str]] = []  # List of tuples (active, device_name, network_name)
-        self.run_sending_process()
+        self.sender: MidiSender = MidiSender(sender_queue, result_queue)
         self.sender_paused = False
+        self.run_sending_process()
 
 
         # Setup the table widget.
@@ -170,23 +171,12 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def restart_sending_process(self):
         """Shutdown the sending process and restart it."""
-        debug_print('Main: Shutting down the sending process...')
+        debug_print('Main: Restart the sending process...')
         # Set the style sheet of the label to indicate that the server is shut down.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: red;\nborder: 1px solid gray;\nborder-radius: 10px;")
         self.repaint()
-        if self.sender.is_alive():
-            sender_queue.put(CommandMessage(Command.STOP))
-            self.sender.join()
-        debug_print('Main: Waiting...')
+        sender_queue.put(CommandMessage(Command.RESTART))
         time.sleep(1)
-        debug_print('Main: Restart the sending process...')
-        self.sender = MidiSender(sender_queue, result_queue)  # pylint: disable=attribute-defined-outside-init
-        self.sender.start()
-        self.update_midi_clock_handling(self.checkBox_OutgoingTraffic_IgnoreMidiClock.checkState())
-        self.update_loopback(self.checkBox_OutgoingTraffic_EnableLoopback.checkState())
-        self.update_save_cpu_time(self.checkBox_OutgoingTraffic_SaveCpuTime.checkState())
-        self.update_network_interface()
-        self.send_input_ports_to_worker_process()
         # Set the style sheet of the label to indicate that the server is running.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
 
@@ -200,25 +190,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def run_sending_process(self):
         """Start the sending process."""
-        self.sender = MidiSender(sender_queue, result_queue)
         self.sender.start()
-        # Set the style sheet of the label to indicate that the server is running.
-        self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
-
-
-    def rerun_sending_process(self, update_network_interface: bool = True):
-        """Restart the sending process."""
-        if self.sender.is_alive():
-            sender_queue.put(CommandMessage(Command.STOP))
-            self.sender.join()
-        self.sender = MidiSender(sender_queue, result_queue)  # pylint: disable=attribute-defined-outside-init
-        self.sender.start()
-        self.update_midi_clock_handling(self.checkBox_OutgoingTraffic_IgnoreMidiClock.checkState())
-        self.update_loopback(self.checkBox_OutgoingTraffic_EnableLoopback.checkState())
-        self.update_save_cpu_time(self.checkBox_OutgoingTraffic_SaveCpuTime.checkState())
-        if update_network_interface:
-            self.update_network_interface()
-        self.send_input_ports_to_worker_process()
         # Set the style sheet of the label to indicate that the server is running.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
 
@@ -295,26 +267,22 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         else:
             state = state == Qt.Checked
         sender_queue.put(CommandMessage(Command.SET_ENABLE_LOOPBACK_INTERFACE, state))
+        sender_queue.put(CommandMessage(Command.RESTART, state))
 
 
     def update_network_interface(self):
         """Update the network interface."""
         debug_print('Main: Update network interface...')
-        text = self.lineEdit_OutgoingTraffic_NetworkInterface.text()
-        if text.strip() == "" or text.strip().lower() == "default":
-            # Handle the special case of the default network interface. Since
-            # the default network interface cannot be set via the
-            # socket.setsockopt() function, we have to restart the sender.
-            # if self.sender.is_alive():
-            #     debug_print('Main: Sender is alive. Rerun it.')
-            #     self.rerun_sending_process(update_network_interface=False)
-            pass
+        text = self.lineEdit_OutgoingTraffic_NetworkInterface.text().strip()
+        if text == "" or text.lower() == "default":
+            sender_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, None))
         else:
             sender_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, text))
+        sender_queue.put(CommandMessage(Command.RESTART))
 
 
     def update_network_name(self, item: QTableWidgetItem):
-        """Update the network name of the input port."""
+        """Update the device name alias / network name of the input port."""
         row = item.row()
         column = item.column()
         if column == 1:

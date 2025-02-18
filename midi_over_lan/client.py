@@ -34,7 +34,7 @@ except Exception:  # pylint: disable=broad-except
     print("Please install the required dependencies by running 'pip install python-rtmidi mido[ports-rtmidi]' in your shell.")
     sys.exit(1)
 
-from midi_over_lan import MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER, MidiMessagePacket, Packet
+from midi_over_lan import MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER, Packet, MidiMessagePacket, HelloPacket, HelloReplyPacket
 
 
 VERSION_NUMBER = "1.0"
@@ -128,6 +128,8 @@ def main_loop(interface_ip: str = '',
                             print(f"From {addr}: {packet.device_name}: {midi_msg}")
                         if port:
                             port.send(midi_msg)
+                    if isinstance(packet, (HelloPacket, HelloReplyPacket)):
+                        printv(3, packet)
         except KeyboardInterrupt:
             print("Program aborted by user.")
 

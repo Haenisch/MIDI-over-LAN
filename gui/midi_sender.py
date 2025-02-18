@@ -3,7 +3,6 @@
 # It is licensed under the GNU Lesser General Public License v3.0.
 # See the LICENSE file for more details.
 
-# TODO: Send hello packets to the multicast group to announce the presence of the client
 # TODO: Send warning and error messages to the GUI client
 
 """Worker process for sending MIDI over LAN data (MIDI messages, hello packets, etc.)."""
@@ -59,6 +58,7 @@ class MidiSender(multiprocessing.Process):
         self.enable_multicast_loop = False
         self.command_queue = command_queue
         self.result_queue = result_queue
+        self.restart = True
         self.running = True
         self.paused = False
         self.midi_input_ports: List[Tuple[str, str]]  = []  # List of tuples (device_name, network_name)
@@ -81,54 +81,61 @@ class MidiSender(multiprocessing.Process):
 
     def run(self):
         """Process the commands and send the MIDI messages."""
-        with socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) as self.sock:
-            self.setup_socket()
+        while(self.restart):
+            self.restart = False  # Flag can be set via the RESTART command
+            with socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) as self.sock:
+                self.setup_socket()
+                self.running = True  # Flag is set via the STOP and RESTART command
+                while self.running:
+                    try:
+                        item = self.command_queue.get_nowait()  # Check for new commands
+                        if not isinstance(item, CommandMessage):
+                            warn(f"MidiSender: Invalid command '{item}'.")
+                            continue
+                        match item.command:
+                            case Command.RESTART:
+                                debug_print("MidiSender: Restarting...")
+                                self.running = False
+                                self.restart = True
+                                break
+                            case Command.PAUSE:
+                                debug_print("MidiSender: Pausing...")
+                                self.paused = True
+                            case Command.RESUME:
+                                debug_print("MidiSender: Resuming...")
+                                self.resume_sending_midi_messages()
+                            case Command.STOP:
+                                debug_print("MidiSender: Stopping...")
+                                self.running = False
+                            case Command.SET_MIDI_INPUT_PORTS:
+                                debug_print(f"MidiSender: Setting MIDI input ports '{item.data}'...")
+                                self.set_midi_input_ports(item)
+                            case Command.SET_NETWORK_INTERFACE:
+                                debug_print(f"MidiSender: Setting network interface '{item.data}'...")
+                                self.set_network_interface(item)
+                            case Command.SET_ENABLE_LOOPBACK_INTERFACE:
+                                debug_print(f"MidiSender: Enable loopback interface ({bool(item.data)})...")
+                                self.enable_multicast_loop = bool(item.data)
+                            case Command.SET_IGNORE_MIDI_CLOCK:
+                                debug_print(f"MidiSender: Ignoring MIDI clock messages ({bool(item.data)})...")
+                                self.ignore_midi_clock = bool(item.data)
+                            case Command.SET_SAVE_CPU_TIME:
+                                debug_print(f"MidiSender: Save CPU time ({bool(item.data)})...")
+                                self.save_cpu_time = bool(item.data)
+                    except queue.Empty:
+                        pass
 
-            while self.running:
-                try:
-                    item = self.command_queue.get_nowait()  # Check for new commands
-                    if not isinstance(item, CommandMessage):
-                        warn(f"MidiSender: Invalid command '{item}'.")
+                    self.send_hello_packets()
+
+                    if self.paused:
+                        time.sleep(0.1)
                         continue
-                    match item.command:
-                        case Command.PAUSE:
-                            debug_print("MidiSender: Pausing...")
-                            self.paused = True
-                        case Command.RESUME:
-                            debug_print("MidiSender: Resuming...")
-                            self.resume_sending_midi_messages()
-                        case Command.STOP:
-                            debug_print("MidiSender: Stopping...")
-                            self.running = False
-                        case Command.SET_MIDI_INPUT_PORTS:
-                            debug_print(f"MidiSender: Setting MIDI input ports '{item.data}'...")
-                            self.set_midi_input_ports(item)
-                        case Command.SET_NETWORK_INTERFACE:
-                            debug_print(f"MidiSender: Setting network interface '{item.data}'...")
-                            self.set_network_interface(item)
-                        case Command.SET_ENABLE_LOOPBACK_INTERFACE:
-                            debug_print(f"MidiSender: Enable loopback interface ({bool(item.data)})...")
-                            self.enable_multicast_loop = bool(item.data)
-                        case Command.SET_IGNORE_MIDI_CLOCK:
-                            debug_print(f"MidiSender: Ignoring MIDI clock messages ({bool(item.data)})...")
-                            self.ignore_midi_clock = bool(item.data)
-                        case Command.SET_SAVE_CPU_TIME:
-                            debug_print(f"MidiSender: Save CPU time ({bool(item.data)})...")
-                            self.save_cpu_time = bool(item.data)
-                except queue.Empty:
-                    pass
 
-                self.send_hello_packets()
+                    self.send_midi_messages()
 
-                if self.paused:
-                    time.sleep(0.1)
-                    continue
-
-                self.send_midi_messages()
-
-                # Save CPU time with the trade-off of a higher latency
-                if self.save_cpu_time:
-                    time.sleep(0.001)
+                    # Save CPU time with the trade-off of a higher latency
+                    if self.save_cpu_time:
+                        time.sleep(0.001)
 
 
     def send_hello_packets(self):
@@ -144,7 +151,10 @@ class MidiSender(multiprocessing.Process):
             # available input ports.
             device_names = [network_name for _, network_name in self.opened_input_ports]
             packet = HelloPacket(device_names=device_names)
-            self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
+            try:
+                self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
+            except OSError as error:
+                warn(f"MidiSender: Could not send 'Hello' packet: {error}")
 
 
     def send_midi_messages(self):
@@ -156,7 +166,10 @@ class MidiSender(multiprocessing.Process):
                 debug_print(f"MidiSender: Sending MIDI message ({message})...")
                 packet = MidiMessagePacket(device_name=network_name, midi_data=bytes(message.bytes()))
                 debug_print(packet)
-                self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
+                try:
+                    self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
+                except OSError as error:
+                    warn(f"MidiSender: Could not send MIDI message: {error}")
 
 
     def set_midi_input_ports(self, item: CommandMessage):
@@ -198,6 +211,8 @@ class MidiSender(multiprocessing.Process):
             else:
                 self.network_interface = network_interface
             self.setup_socket()
+        elif network_interface is None:
+            pass
         else:
             warn(f"MidiSender (SET_NETWORK_INTERFACE): Expected string, got '{item.data}'.")
 
@@ -221,6 +236,7 @@ class MidiSender(multiprocessing.Process):
             else:
                 # The network interface must be given as a hostname; try to resolve it
                 try:
+                    print("GETHOSTNAME")
                     self.network_interface = gethostbyname(self.network_interface)
                 except gaierror:
                     warn(f"Could not resolve hostname '{self.network_interface}'. Using the default interface.")

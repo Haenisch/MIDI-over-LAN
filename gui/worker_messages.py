@@ -7,7 +7,7 @@
 
 from abc import ABC
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 
 
 class Command(Enum):
@@ -15,6 +15,9 @@ class Command(Enum):
 
     Available commands:
 
+        RESTART:
+            objective: Restart the worker process.
+            data: None
         PAUSE
             objective: Pause the worker process.
             data: None
@@ -37,7 +40,7 @@ class Command(Enum):
 
         SET_NETWORK_INTERFACE:
             objective: Set the network interface for sending multicast packets.
-            data: str (IPv4 address or hostname)
+            data: str (IPv4 address or hostname); "" or None for the default interface
 
         SET_ENABLE_LOOPBACK_INTERFACE:
             objective: Enable or disable the loopback interface.
@@ -54,27 +57,32 @@ class Command(Enum):
     Note:
     
         - The set of MIDI input ports is a list of tuples, where each tuple
-            contains the actual device name and its user-defined network name as
-            well as a flag indicating whether the port is active. With each call
-            of SET_MIDI_INPUT_PORTS, the internal list of MIDI input ports is
-            replaced.
+          contains the actual device name and its user-defined network name as
+          well as a flag indicating whether the port is active. With each call
+          of SET_MIDI_INPUT_PORTS, the internal list of MIDI input ports is
+          replaced.
 
         - The set of MIDI output ports is a list of tuples, where each tuple
-            contains the network name (MIDI input ports from the network) and
-            the local MIDI output port name to which the input port is bind
-            (i.e., to which the MIDI messages should be sent). With each call of
-            SET_MIDI_OUTPUT_PORTS, the internal list of MIDI output ports is
-            replaced.
+          contains the network name (MIDI input ports from the network) and
+          the local MIDI output port name to which the input port is bind
+          (i.e., to which the MIDI messages should be sent). With each call of
+          SET_MIDI_OUTPUT_PORTS, the internal list of MIDI output ports is
+          replaced.
+        
+        - If the network interface is set to an empty string or None, the
+          default network interface is used. Each time the interface is set,
+          the previous interface is closed and the new interface is opened.
     """
-    PAUSE = 1
-    RESUME = 2
-    STOP = 3
-    SET_MIDI_INPUT_PORTS = 4
-    SET_MIDI_OUTPUT_PORTS = 5
-    SET_NETWORK_INTERFACE = 6
-    SET_ENABLE_LOOPBACK_INTERFACE = 7
-    SET_IGNORE_MIDI_CLOCK = 8
-    SET_SAVE_CPU_TIME = 9
+    RESTART = auto()
+    PAUSE = auto()
+    RESUME = auto()
+    STOP = auto()
+    SET_MIDI_INPUT_PORTS = auto()
+    SET_MIDI_OUTPUT_PORTS = auto()
+    SET_NETWORK_INTERFACE = auto()
+    SET_ENABLE_LOOPBACK_INTERFACE = auto()
+    SET_IGNORE_MIDI_CLOCK = auto()
+    SET_SAVE_CPU_TIME = auto()
 
 
 class WorkerMessage(ABC):

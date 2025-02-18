@@ -103,6 +103,8 @@ Technical details:
 # Last changed on 2025-02-09.
 # License: LGPL 3 or later (see LICENSE file for details).
 
+# TODO: Add a counter field to the Hello and Hello Reply packets.
+
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 # pylint: disable=line-too-long
@@ -305,10 +307,13 @@ class HelloPacket(Packet):
 
     def __str__(self):
         """Return a string representation of the Hello packet."""
-        output_string = "HelloPacket\n"
-        for device_name in self.device_names:
-            output_string += f"  Device name: {device_name}\n"
-        return output_string
+        if len(self.device_names) == 0:
+            return "HelloPacket (no device names included)\n"
+        else:
+            output_string = "HelloPacket\n"
+            for device_name in self.device_names:
+                output_string += f"  Device name: {device_name}\n"
+            return output_string
 
 
     def add_device_name(self, device_name: str):
@@ -372,10 +377,13 @@ class HelloReplyPacket(Packet):
 
     def __str__(self):
         """Return a string representation of the Hello Reply packet."""
-        output_string = "HelloReplyPacket\n"
-        for device_name in self.device_names:
-            output_string += f"  Device name: {device_name}\n"
-        return output_string
+        if len(self.device_names) == 0:
+            return "HelloReplyPacket (no device names included)\n"
+        else:
+            output_string = "HelloReplyPacket\n"
+            for device_name in self.device_names:
+                output_string += f"  Device name: {device_name}\n"
+            return output_string
 
 
     def add_device_name(self, device_name: str):
