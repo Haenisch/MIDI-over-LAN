@@ -116,6 +116,7 @@ class MidiSender(multiprocessing.Process):
                             case Command.SET_ENABLE_LOOPBACK_INTERFACE:
                                 debug_print(f"MidiSender: Enable loopback interface ({bool(item.data)})...")
                                 self.enable_multicast_loop = bool(item.data)
+                                self.setup_socket()
                             case Command.SET_IGNORE_MIDI_CLOCK:
                                 debug_print(f"MidiSender: Ignoring MIDI clock messages ({bool(item.data)})...")
                                 self.ignore_midi_clock = bool(item.data)
@@ -193,6 +194,7 @@ class MidiSender(multiprocessing.Process):
                 self.opened_input_ports.append((port, network_name))
             except OSError as error:
                 warn(f"MidiSender: Could not open MIDI input port '{device_name}': {error}")
+                # TODO: Send warning message to the GUI client
 
 
     def set_network_interface(self, item: CommandMessage):
@@ -236,7 +238,6 @@ class MidiSender(multiprocessing.Process):
             else:
                 # The network interface must be given as a hostname; try to resolve it
                 try:
-                    print("GETHOSTNAME")
                     self.network_interface = gethostbyname(self.network_interface)
                 except gaierror:
                     warn(f"Could not resolve hostname '{self.network_interface}'. Using the default interface.")

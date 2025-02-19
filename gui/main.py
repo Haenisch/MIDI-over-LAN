@@ -72,16 +72,26 @@ from worker_messages import Command, CommandMessage, ResultMessage
 from MainWidget import Ui_MainWidget
 
 
+# Create queues for communication between the GUI and the worker processes
+sender_queue = multiprocessing.Queue()  # Queue for sending commands to the sender process
+receiver_queue = multiprocessing.Queue()  # Queue for sending commands to the receiver process
+result_queue = multiprocessing.Queue()  # Queue for receiving results from the sender and receiver processes
+
+
 def debug_print(message):
     """Print the message if the debug flag is set."""
     if __debug__:
         print(message)
 
 
-# Create queues for communication between the GUI and the worker processes
-sender_queue = multiprocessing.Queue()  # Queue for sending commands to the sender process
-receiver_queue = multiprocessing.Queue()  # Queue for sending commands to the receiver process
-result_queue = multiprocessing.Queue()  # Queue for receiving results from the sender and receiver processes
+def is_input_port_in_use(port_name: str) -> bool:
+    """Check if a MIDI input port is already open."""
+    try:
+        with mido.open_input(port_name):  # pylint: disable=no-member
+            return False  # if the port can be opened, it is not open
+    except IOError:
+        # in case of an IOError, the port is probably already open
+        return True
 
 
 class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
@@ -128,7 +138,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
 
     def add_input_port(self, active: bool, device_name: str, network_name: str):
-        """Add an input port to the internal list of input ports."""
+        """Add the given input port to the table widget and to the internal list of input ports."""
         # Skip if the port is already in the list.
         for port in self.input_ports:
             if port[1] == device_name:
@@ -141,6 +151,10 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         item.setFlags(item.flags() & ~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
         self.tableWidget_LocalInputPorts.setItem(row, 0, item)
         self.tableWidget_LocalInputPorts.setItem(row, 1, QTableWidgetItem(network_name))
+        if is_input_port_in_use(device_name):
+            debug_print(f"Port {device_name} is already in use.")
+            item.setForeground(Qt.red)
+            item.setToolTip("The input port is already in use by another application.")
 
 
     def pause_sending_process(self):
@@ -267,7 +281,6 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         else:
             state = state == Qt.Checked
         sender_queue.put(CommandMessage(Command.SET_ENABLE_LOOPBACK_INTERFACE, state))
-        sender_queue.put(CommandMessage(Command.RESTART, state))
 
 
     def update_network_interface(self):
