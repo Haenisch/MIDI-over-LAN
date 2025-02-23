@@ -16,44 +16,46 @@ class Command(Enum):
     Available commands:
 
         RESTART:
-            objective: Restart the worker process.
-            data: None
+            objective:  Restart the worker process.
+                 data:  None
         PAUSE
-            objective: Pause the worker process.
-            data: None
+            objective:  Pause the worker process.
+                 data:  None
 
         RESUME:
-            objective: Resume the worker process.
-            data: None
+            objective:  Resume the worker process.
+                 data:  None
 
         STOP:
-            objective: Stop the worker process.
-            data: None
+            objective:  Stop the worker process.
+                 data:  None
 
         SET_MIDI_INPUT_PORTS:
-            objective: Set the list of MIDI input ports to be sent.
-            data: list of tuples (active, device_name, network_name)
+            objective:  Set the list of MIDI input ports to be sent.
+                 data:  list of tuples (active, device_name, network_name)
 
         SET_MIDI_OUTPUT_PORTS:
-            objective: Set the list of MIDI output ports to be processed.
-            data: list of tuples (network_name, device_name)
+            objective:  Set the list of MIDI output ports to be bound.
+                 data:  list of tuples (network_name, device_name)
 
         SET_NETWORK_INTERFACE:
-            objective: Set the network interface for sending multicast packets.
-            data: str (IPv4 address or hostname); "" or None for the default interface
+            objective:  Set the network interface for sending multicast packets.
+                 data:  str (IPv4 address or hostname); "" or None for the
+                        default interface
 
         SET_ENABLE_LOOPBACK_INTERFACE:
-            objective: Enable or disable the loopback interface.
-            data: bool
+            objective:  Enable or disable the loopback interface.
+                 data:  bool
 
         SET_IGNORE_MIDI_CLOCK:
-            objective: Ignore or process MIDI clock messages.
-            data: bool
+            objective:  Ignore or process MIDI clock messages.
+                 data:  bool
 
         SET_SAVE_CPU_TIME:
-            objective: If enabled, save CPU time with the trade-off of a higher latency.
-            data: bool
-    
+            objective:  If enabled, save CPU time with the trade-off of a higher
+                        latency.
+                 data:  bool
+
     Note:
     
         - The set of MIDI input ports is a list of tuples, where each tuple
@@ -85,6 +87,31 @@ class Command(Enum):
     SET_SAVE_CPU_TIME = auto()
 
 
+class Information(Enum):
+    """Enumeration fpr information messages.
+
+    Available commands:
+
+        INTERNAL_HELLO_PACKET_INFO:
+            objective:  Provide information about the just sent hello packet.
+                        The hello packet has been created by the sending worker
+                        process and has been sent to the network.
+                 data:  tuple (packet id, timestamp as provided by perf_counter)
+
+        NOTIFY_ABOUT_RECEIVED_HELLO_PACKET:
+            objective:  Provide information about a just received hello reply
+                        packet (received from the network by the receiving
+                        worker process). The information is passed to the
+                        sending worker process in order create and send a
+                        corresponding hello reply packet.
+                 data:  tuple (ip address of remote host, packet id, timestamp
+                        as provided by perf_counter)
+"""
+
+    INTERNAL_HELLO_PACKET_INFO = auto()
+    NOTIFY_ABOUT_RECEIVED_HELLO_PACKET = auto()
+
+
 class WorkerMessage(ABC):
     """Base class for worker messages."""
 
@@ -93,6 +120,13 @@ class WorkerMessage(ABC):
 class CommandMessage(WorkerMessage):
     """Command message."""
     command: Command
+    data: any = None
+
+
+@dataclass
+class InfoMessage(WorkerMessage):
+    """Info message."""
+    info: Information
     data: any = None
 
 

@@ -152,7 +152,8 @@ def parse_arguments():
                '  $ python -m midi_over_lan.server\n'
                '  $ python -m midi_over_lan.server -i localhost\n'
                '  $ python -m midi_over_lan.server -i 192.168.0.15\n'
-               '  $ python -m midi_over_lan.server -i 192.168.0.15 -o\n')
+               '  $ python -m midi_over_lan.server -i 192.168.0.15 -o\n'
+               '  $ python -m midi_over_lan.server -CVVV\n')
 
     parser.add_argument('-h', '--help',
                         action='help',

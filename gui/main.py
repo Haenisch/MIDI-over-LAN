@@ -65,6 +65,7 @@ from PySide6.QtWidgets import QTableWidgetItem
 
 import midi_over_lan
 from midi_sender import MidiSender
+from midi_receiver import MidiReceiver
 from worker_messages import Command, CommandMessage, ResultMessage
 
 # To generate the python file from the ui file, run the following command:
@@ -102,9 +103,11 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         super().__init__()
         self.setupUi(self)
         self.input_ports: List[Tuple[bool, str, str]] = []  # List of tuples (active, device_name, network_name)
-        self.sender: MidiSender = MidiSender(sender_queue, result_queue)
+        self.sender = MidiSender(sender_queue, receiver_queue, result_queue)
         self.sender_paused = False
+        self.receiver = MidiReceiver(sender_queue, receiver_queue, result_queue)
         self.run_sending_process()
+        self.run_receiving_process()
 
 
         # Setup the table widget.
@@ -135,6 +138,8 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         # Stop the worker processes and wait for them to finish
         sender_queue.put(CommandMessage(Command.STOP))
         self.sender.join()
+        receiver_queue.put(CommandMessage(Command.STOP))
+        self.receiver.join()
 
 
     def add_input_port(self, active: bool, device_name: str, network_name: str):
@@ -200,6 +205,11 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         sender_queue.put(CommandMessage(Command.RESUME))
         # Set the style sheet of the label to indicate that the server is running.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
+
+
+    def run_receiving_process(self):
+        """Start the sending process."""
+        self.receiver.start()
 
 
     def run_sending_process(self):

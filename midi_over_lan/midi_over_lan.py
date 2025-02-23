@@ -63,8 +63,9 @@ Technical details:
     'Hello' packets packets start with a numeric ID field (a 4-byte integer).
     Each time a 'Hello' packet is sent, the ID is incremented (on a per-host
     basis). The 'Hello Reply' packets must contain the same ID as the
-    corresponding 'Hello' packet. The ID is used to determine the round-trip
-    time between the hosts.
+    corresponding 'Hello' packet as well as the IP address of the original
+    sender of the 'Hello' packet (the recipient of the 'Hello Reply' packet)
+    in order to get the assignment right.
     
     As 'Hello' and 'Hello Reply' packets may contain a list of device names of
     the hosts that sent the packet, the number of device names is stored in the
@@ -76,9 +77,17 @@ Technical details:
 
     The packet structure is as follows:
 
+    Hello Packet:
+
     +--------------+---------------------------------+-----------------------------+-----------------------------+-----+
     | ID (4 bytes) | Number of Device Names (1 byte) | Device Name Length (1 byte) | Device Name (max. 64 bytes) | ... |
     +--------------+---------------------------------+-----------------------------+-----------------------------+-----+
+
+    Hello Reply Packet:
+
+    +--------------+----------------------+---------------------------------+-----------------------------+-----------------------------+-----+
+    | ID (4 bytes) | IP Adresss (4 Bytes) | Number of Device Names (1 byte) | Device Name Length (1 byte) | Device Name (max. 64 bytes) | ... |
+    +--------------+----------------------+---------------------------------+-----------------------------+-----------------------------+-----+
 
     In summery, the packet 'MIDI Message' packet structure is as follows:
 
@@ -91,7 +100,7 @@ Technical details:
            device that sent the message.
         5. MIDI Data (variable length): The actual MIDI message data.
     
-    The 'Hello' and 'Hello Reply' packet structure is as follows:
+    The 'Hello' packet structure is as follows:
 
         1. Header (4 bytes): The ASCII string "MIDI".
         2. Version (1 byte): The protocol version, currently 1.
@@ -107,9 +116,27 @@ Technical details:
            device that sent the message.
         8. Repeat steps 6 and 7 for each device name.
     
+    The 'Hello Reply' packet structure is as follows:
+
+        1. Header (4 bytes): The ASCII string "MIDI".
+        2. Version (1 byte): The protocol version, currently 1.
+        3. Packet Type (1 byte): The type of the packet, as defined in the
+           'PacketType' enumeration.
+        4. ID (4 bytes): The numeric ID from the correponding 'Hello' packet.
+        5. IP Address (4 bytes): The IP address of the original sender of the
+           'Hello' packet (the recipient of the 'Hello Reply' packet).
+        6. Number of Device Names (1 byte): The number of device names.
+
+        If present:
+        7. Device Name Length (1 byte): The length of the device name.
+        8. Device Name (variable length): The UTF-8 encoded name of the MIDI
+           device that sent the message.
+        9. Repeat steps 6 and 7 for each device name.
+    
     A last note: UDP datagrams should be smaller than the maximum transmission
-    unit (MTU) of the network to avoid fragmentation. The MTU is typically 1500 bytes for Ethernet
-    networks. However, in theory a UDP packet may be as large as 65507 bytes.
+    unit (MTU) of the network to avoid fragmentation. The MTU is typically 1500
+    bytes for Ethernet networks. However, in theory a UDP packet may be as large
+    as 65507 bytes.
 """
 
 # Written by Christoph Hänisch.
@@ -120,6 +147,7 @@ Technical details:
 # pylint: disable=missing-class-docstring
 # pylint: disable=line-too-long
 
+import re
 from enum import IntEnum
 from typing import ClassVar
 
@@ -185,8 +213,9 @@ _MIDI_MESSAGE_PACKET__DEVICE_NAME_LENGTH_INDEX = 6
 _MIDI_MESSAGE_PACKET__DEVICE_NAME_INDEX = 7
 _HELLO_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX = 10
 _HELLO_PACKET__FIRST_DEVICE_NAME_INDEX = 11  # includes the length field
-_HELLO_REPLY_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX = 10
-_HELLO_REPLY_PACKET__FIRST_DEVICE_NAME_INDEX = 11  # includes the length field
+_HELLO_REPLY_PACKET__IP_ADDRESS_INDEX = 10
+_HELLO_REPLY_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX = 14
+_HELLO_REPLY_PACKET__FIRST_DEVICE_NAME_INDEX = 15  # includes the length field
 
 
 class PacketType(IntEnum):
@@ -390,27 +419,34 @@ class HelloPacket(Packet):
 
 @dataclass
 class HelloReplyPacket(Packet):
+    """Data class for a Hello Reply packet.
+    
+    Example:
+
+        # Create a Hello Reply packet
+        packet = HelloReplyPacket(id = 37)  # ID of the corresponding 'Hello' packet
+        packet.recipient_ip = '192.168.0.71'  # IP address of the original sender of the 'Hello' packet
+        packet.add_device_name('MIDI Keyboard')
+        packet.add_device_name('MIDI Drum Kit')
+        packet.add_device_name('MIDI Synthesizer')
+        data = packet.to_bytes()
+        print(data)
+    """
     packet_type: int = PacketType.HELLO_REPLY.value
-    id: int = field(init=False)
+    id: int = -1 # ID of the corresponding 'Hello' packet
+    recipient_ip: str = ''  # IP address of the original sender of the 'Hello' packet
     number_of_device_names: int = 0
     device_names: list[str] = field(default_factory=list)
     header: bytes = Packet.HELLO_REPLY_PACKET_HEADER  # header without the device name
 
-    _counter: ClassVar[int] = 0
-
-
-    def __post_init__(self):
-        """Set the ever increasing ID of the Hello Reply packet."""
-        self.id = HelloReplyPacket._counter
-        HelloReplyPacket._counter += 1
-
 
     def __str__(self):
         """Return a string representation of the Hello Reply packet."""
+        output_string = f"HelloReplyPacket (id = {self.id}, recipient = {self.recipient_ip})"
         if len(self.device_names) == 0:
-            return f"HelloReplyPacket (id = {self.id}) (no device names included)\n"
+            return output_string + " (no device names included)\n"
         else:
-            output_string = f"HelloReplyPacket (id = {self.id})\n"
+            output_string = output_string + "\n"
             for device_name in self.device_names:
                 output_string += f"  Device name: {device_name}\n"
             return output_string
@@ -442,9 +478,11 @@ class HelloReplyPacket(Packet):
             raise ValueError("Invalid MIDI over LAN packet header")
 
         packet = HelloReplyPacket()
-        n = data[_HELLO_REPLY_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX]  # number of subsequent device names
         # ID is the first 4 bytes of the payload
         packet.id = int.from_bytes(data[_HEADER_LENGTH:_HEADER_LENGTH + 4], 'big')
+        # The next 4 bytes are the IPv4 address of the original sender
+        packet.recipient_ip = '.'.join(str(byte) for byte in data[_HELLO_REPLY_PACKET__IP_ADDRESS_INDEX:_HELLO_REPLY_PACKET__IP_ADDRESS_INDEX + 4])
+        n = data[_HELLO_REPLY_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX]  # number of subsequent device names
         if n == 0:
             return packet
         offset = _HELLO_REPLY_PACKET__FIRST_DEVICE_NAME_INDEX  # includes the 1 byte long length field
@@ -461,8 +499,17 @@ class HelloReplyPacket(Packet):
 
 
     def to_bytes(self):
-        """Return the Hello packet as a byte string (e.g., for using it in a UDP packet)."""
-        data = self.header + self.id.to_bytes(4, 'big') + len(self.device_names).to_bytes(1, 'big')
+        """Return the Hello packet as a byte string (e.g., for using it in a UDP packet).
+        
+        Exceptions:
+            - ValueError: if the IP address is invalid.
+        """
+        # Convert the IP address to a byte string
+        regex = r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+        if not re.match(regex, self.recipient_ip):
+            raise ValueError("Invalid IP address")
+        ip_bytes = b''.join(int(byte).to_bytes(1, 'big') for byte in map(int, self.recipient_ip.split('.')))
+        data = self.header + self.id.to_bytes(4, 'big') + ip_bytes + len(self.device_names).to_bytes(1, 'big')
         for device_name in self.device_names:
             device_name = to_byte_string(device_name, 64)
             data += len(device_name).to_bytes(1, 'big') + device_name

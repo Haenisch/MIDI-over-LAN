@@ -1,0 +1,232 @@
+# Copyright (c) 2025 Christoph Hänisch.
+# This file is part of the MIDI over LAN project.
+# It is licensed under the GNU Lesser General Public License v3.0.
+# See the LICENSE file for more details.
+
+"""Module for handling incoming MIDI over LAN data."""
+
+import multiprocessing
+import queue
+import re
+import struct
+import time
+from collections import deque
+from socket import gaierror, gethostbyname, inet_aton, AF_INET, INADDR_ANY, IPPROTO_IP, IP_ADD_MEMBERSHIP, IPPROTO_UDP, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, socket
+from typing import List, Tuple
+from warnings import warn
+
+import mido
+
+from worker_messages import Command, CommandMessage, Information, InfoMessage, ResultMessage
+from midi_over_lan import MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER, Packet, MidiMessagePacket, HelloPacket, HelloReplyPacket
+
+# pylint: disable=line-too-long
+# pylint: disable=no-member
+
+
+def debug_print(message):
+    """Print the message if the debug flag is set."""
+    if __debug__:
+        print(message)
+
+
+def is_output_port_in_use(port_name: str) -> bool:
+    """Check if a MIDI output port is already open."""
+    try:
+        with mido.open_output(port_name):  # pylint: disable=no-member
+            return False  # if the port can be opened, it is not open
+    except IOError:
+        # in case of an IOError, the port is probably already open
+        return True
+
+
+class MidiReceiver(multiprocessing.Process):
+    """Worker process for handling incoming MIDI over LAN data."""
+
+
+    def __init__(self, sender_queue, receiver_queue, result_queue):
+        """Initialize the MidiReceiver."""
+        super().__init__()
+        self.sock = None  # create the socket in the run() method
+        self.interface_ip = None
+        self.network_interface = None
+        self.sender_queue = sender_queue
+        self.receiver_queue = receiver_queue
+        self.result_queue = result_queue
+        self.restart = True
+        self.running = True
+        self.paused = False
+        self.save_cpu_time = True
+        self.midi_devices: List[Tuple[str, str]] = []  # List of tuples (device_name, source ip address)
+        self.midi_output_ports: List[bool, str] = []  # List of tuples (available, port_name)
+        self.received_midi_messages: deque[Tuple[MidiMessagePacket, str]] = deque()  # (packet, source ip address)
+        self.received_hello_packets: deque[Tuple[HelloPacket, str]] = deque()  # (packet, source ip address)
+        self.received_hello_reply_packets: deque[Tuple[HelloReplyPacket, str]] = deque()  # (packet, address)
+        self.sent_hello_packets: dict[id, float] = dict()  # entries of the form {packet_id: perf_counter timestamp}
+
+
+    def run(self):
+        """Run the MidiReceiver."""
+        while self.restart:
+            self.restart = False  # Flag can be set via the RESTART command
+            self.get_midi_output_ports()
+            with socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) as self.sock:
+                self.setup_socket()
+                self.running = True  # Flag is set via the STOP and RESTART command
+                while self.running:
+                    try:
+                        item = self.receiver_queue.get_nowait()  # Check for new commands
+                        if isinstance(item, CommandMessage):
+                            match item.command:
+                                case Command.RESTART:
+                                    debug_print("MidiReceiver: Restarting...")
+                                    self.running = False
+                                    self.restart = True
+                                    break
+                                case Command.PAUSE:
+                                    debug_print("MidiReceiver: Pausing...")
+                                    self.paused = True
+                                case Command.RESUME:
+                                    debug_print("MidiReceiver: Resuming...")
+                                    self.resume_sending_midi_messages()
+                                case Command.STOP:
+                                    debug_print("MidiReceiver: Stopping...")
+                                    self.running = False
+                                case Command.SET_MIDI_OUTPUT_PORTS:
+                                    debug_print(f"MidiReceiver: Setting MIDI input ports '{item.data}'...")
+                                    # self.set_midi_output_ports(item)  # TODO
+                                case Command.SET_NETWORK_INTERFACE:
+                                    debug_print(f"MidiReceiver: Setting network interface '{item.data}'...")
+                                    self.set_network_interface(item)
+                                    # Restart the process to apply the new network interface
+                                    self.running = False
+                                    self.restart = True
+                                    break
+                                case Command.SET_SAVE_CPU_TIME:
+                                    debug_print(f"MidiReceiver: Save CPU time ({bool(item.data)})...")
+                                    self.save_cpu_time = bool(item.data)
+                        elif isinstance(item, InfoMessage):
+                            match item.info:
+                                case Information.INTERNAL_HELLO_PACKET_INFO:
+                                    debug_print(f"MidiReceiver: Received internal hello packet information...")
+                                    self.store_internal_hello_packet_info(item)
+                        else:
+                            warn(f"MidiReceiver: Invalid command '{item}'.")
+                            continue
+                    except queue.Empty:
+                        pass
+
+                    self.check_and_store_incoming_packets()
+                    self.process_hello_packets()
+                    self.process_hello_reply_packets()
+
+                    if self.paused:
+                        time.sleep(0.1)
+                        continue
+
+                    self.process_other_packets()
+
+                    # Save CPU time with the trade-off of a higher latency
+                    if self.save_cpu_time:
+                        time.sleep(0.001)
+
+
+    def check_and_store_incoming_packets(self):
+        """Check for incoming packets and store them."""
+        try:
+            data, (source_ip, _) = self.sock.recvfrom(4096)  # buffer size of 4096 bytes
+        except BlockingIOError:
+            return  # no data received
+        try:
+            packet = Packet.from_bytes(data)
+            debug_print(f"MidiReceiver: Received packet from {source_ip} of type {type(packet)}")
+        except ValueError:
+            debug_print(f"MidiReceiver: Received invalid packet from {source_ip}")
+            return
+        if isinstance(packet, MidiMessagePacket):
+            self.received_midi_messages.append((packet, source_ip))  # pylint: disable=no-value-for-parameter
+        elif isinstance(packet, HelloPacket):
+            self.received_hello_packets.append((packet, source_ip))  # pylint: disable=no-value-for-parameter
+        elif isinstance(packet, HelloReplyPacket):
+            self.received_hello_reply_packets.append((packet, source_ip))  # pylint: disable=no-value-for-parameter
+        else:
+            debug_print(f"MidiReceiver: Received unknown packet format from {source_ip} of type {type(packet)}")
+
+
+    def get_midi_output_ports(self):
+        """Determine MIDI output ports on the host computer."""
+        for port in mido.get_output_names():
+            available = not is_output_port_in_use(port)
+            self.midi_output_ports.append((available, port))
+            debug_print(f"MidiReceiver: MIDI output port '{port}' is {'available' if available else 'in use'}.")
+
+
+    def process_hello_packets(self):
+        """Process incoming hello packets."""
+        while self.received_hello_packets:
+            packet, source_ip = self.received_hello_packets.popleft()
+            # Inform the sending process about the received hello packet
+            self.sender_queue.put(InfoMessage(Information.NOTIFY_ABOUT_RECEIVED_HELLO_PACKET, (source_ip, packet.id, time.perf_counter())))
+            debug_print(f"MidiReceiver: Received hello packet. Informing sender process...")
+            # TODO: Inform main process about available network MIDI devices
+        # Delete hello packets information that is older than 5 minutes
+        self.sent_hello_packets = {packet_id: timestamp for packet_id, timestamp in self.sent_hello_packets.items() if time.perf_counter() - timestamp < 300}
+
+
+    def process_hello_reply_packets(self):
+        """Process incoming hello reply packets."""
+        while self.received_hello_reply_packets:
+            packet, source_ip = self.received_hello_reply_packets.popleft()
+            send_off_timestamp = self.sent_hello_packets.get(packet.id)
+            receive_timestamp = time.perf_counter()
+            round_trip_time = receive_timestamp - send_off_timestamp
+            debug_print(f"MidiReceiver: Received hello reply packet from {source_ip}: {packet}")
+            debug_print(f"MidiReceiver: Round trip time: {round_trip_time * 1000:.2f} milliseconds")
+
+
+    def process_other_packets(self):
+        """Process incoming MIDI message packets."""
+        while self.received_midi_messages:
+            packet, addr = self.received_midi_messages.popleft()
+            midi_msg = mido.parse(packet.midi_data)
+            debug_print(f"MidiReceiver: Received MIDI message from {addr}: {midi_msg}")
+
+
+    def setup_socket(self):
+        """Setup the socket for receiving MIDI data."""
+        if not self.sock:
+            return
+
+        # Allow multiple sockets to use the same port
+        self.sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+
+        if not self.interface_ip:
+            # Bind to all interfaces
+            self.sock.bind(('', MULTICAST_PORT_NUMBER))
+            mreq = struct.pack("4sl", inet_aton(MULTICAST_GROUP_ADDRESS), INADDR_ANY)
+            self.sock.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq)
+        else:
+            # Is the network interface given as an IPv4 address?
+            if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", self.network_interface):
+                pass
+            else:
+                # The network interface must be given as a hostname; try to resolve it
+                try:
+                    self.interface_ip = gethostbyname(self.interface_ip)
+                except gaierror:
+                    warn(f"Could not resolve hostname '{self.network_interface}'. Using the default interface.")
+                    self.network_interface = None
+                    return
+                # Bind to the specific interface
+                self.sock.bind((interface_ip, MULTICAST_PORT_NUMBER))
+                mreq = struct.pack("4s4s", socket.inet_aton(MULTICAST_GROUP_ADDRESS), inet_aton(interface_ip))
+                self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        self.sock.setblocking(False)
+
+
+    def store_internal_hello_packet_info(self, message: InfoMessage):
+        """Store the information for the sent hello packet provided by the sender process."""
+        packet_id = message.data[0]
+        timestamp = message.data[1]
+        self.sent_hello_packets[packet_id] = timestamp
+        debug_print(f"MidiReceiver: Hello packet information (id = {packet_id}, timestamp = {timestamp})...")
