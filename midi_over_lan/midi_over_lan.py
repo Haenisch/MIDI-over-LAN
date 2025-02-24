@@ -425,7 +425,7 @@ class HelloReplyPacket(Packet):
 
         # Create a Hello Reply packet
         packet = HelloReplyPacket(id = 37)  # ID of the corresponding 'Hello' packet
-        packet.recipient_ip = '192.168.0.71'  # IP address of the original sender of the 'Hello' packet
+        packet.remote_ip = '192.168.0.71'  # IP address of the original sender of the 'Hello' packet
         packet.add_device_name('MIDI Keyboard')
         packet.add_device_name('MIDI Drum Kit')
         packet.add_device_name('MIDI Synthesizer')
@@ -434,7 +434,7 @@ class HelloReplyPacket(Packet):
     """
     packet_type: int = PacketType.HELLO_REPLY.value
     id: int = -1 # ID of the corresponding 'Hello' packet
-    recipient_ip: str = ''  # IP address of the original sender of the 'Hello' packet
+    remote_ip: str = ''  # IP address of the original sender of the 'Hello' packet
     number_of_device_names: int = 0
     device_names: list[str] = field(default_factory=list)
     header: bytes = Packet.HELLO_REPLY_PACKET_HEADER  # header without the device name
@@ -442,7 +442,7 @@ class HelloReplyPacket(Packet):
 
     def __str__(self):
         """Return a string representation of the Hello Reply packet."""
-        output_string = f"HelloReplyPacket (id = {self.id}, recipient = {self.recipient_ip})"
+        output_string = f"HelloReplyPacket (id = {self.id}, recipient = {self.remote_ip})"
         if len(self.device_names) == 0:
             return output_string + " (no device names included)\n"
         else:
@@ -481,7 +481,7 @@ class HelloReplyPacket(Packet):
         # ID is the first 4 bytes of the payload
         packet.id = int.from_bytes(data[_HEADER_LENGTH:_HEADER_LENGTH + 4], 'big')
         # The next 4 bytes are the IPv4 address of the original sender
-        packet.recipient_ip = '.'.join(str(byte) for byte in data[_HELLO_REPLY_PACKET__IP_ADDRESS_INDEX:_HELLO_REPLY_PACKET__IP_ADDRESS_INDEX + 4])
+        packet.remote_ip = '.'.join(str(byte) for byte in data[_HELLO_REPLY_PACKET__IP_ADDRESS_INDEX:_HELLO_REPLY_PACKET__IP_ADDRESS_INDEX + 4])
         n = data[_HELLO_REPLY_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX]  # number of subsequent device names
         if n == 0:
             return packet
@@ -506,9 +506,9 @@ class HelloReplyPacket(Packet):
         """
         # Convert the IP address to a byte string
         regex = r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"
-        if not re.match(regex, self.recipient_ip):
+        if not re.match(regex, self.remote_ip):
             raise ValueError("Invalid IP address")
-        ip_bytes = b''.join(int(byte).to_bytes(1, 'big') for byte in map(int, self.recipient_ip.split('.')))
+        ip_bytes = b''.join(int(byte).to_bytes(1, 'big') for byte in map(int, self.remote_ip.split('.')))
         data = self.header + self.id.to_bytes(4, 'big') + ip_bytes + len(self.device_names).to_bytes(1, 'big')
         for device_name in self.device_names:
             device_name = to_byte_string(device_name, 64)

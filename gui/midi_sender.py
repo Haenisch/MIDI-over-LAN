@@ -128,7 +128,7 @@ class MidiSender(multiprocessing.Process):
                                     self.save_cpu_time = bool(item.data)
                         elif isinstance(item, InfoMessage):
                             match item.info:
-                                case Information.NOTIFY_ABOUT_RECEIVED_HELLO_PACKET:
+                                case Information.RECEIVED_HELLO_PACKET:
                                     self.send_hello_reply_packet(item)
                         else:
                             warn(f"MidiSender: Invalid command '{item}'.")
@@ -162,7 +162,7 @@ class MidiSender(multiprocessing.Process):
             # available input ports.
             device_names = [network_name for _, network_name in self.opened_input_ports]  # TODO: Add only the active input ports
             packet = HelloPacket(device_names=device_names)
-            message = InfoMessage(Information.INTERNAL_HELLO_PACKET_INFO, (packet.id, time.perf_counter()))
+            message = InfoMessage(Information.HELLO_PACKET_INFO, (packet.id, time.perf_counter()))
             self.receiver_queue.put(message)
             try:
                 self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
@@ -242,6 +242,9 @@ class MidiSender(multiprocessing.Process):
             pass
         else:
             warn(f"MidiSender (SET_NETWORK_INTERFACE): Expected string, got '{item.data}'.")
+        # Inform the receiver process about the current network interface (needed to
+        # filter incoming hello reply packets which are sent to the multicast group)
+        self.receiver_queue.put(InfoMessage(Information.NETWORK_INTERFACE_OF_SENDING_WORKER, self.network_interface))
 
 
     def setup_socket(self):

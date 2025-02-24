@@ -11,7 +11,19 @@ import re
 import struct
 import time
 from collections import deque
-from socket import gaierror, gethostbyname, inet_aton, AF_INET, INADDR_ANY, IPPROTO_IP, IP_ADD_MEMBERSHIP, IPPROTO_UDP, SOCK_DGRAM, SOL_SOCKET, SO_REUSEADDR, socket
+from socket import (gaierror,
+                    gethostbyname,
+                    gethostname,
+                    inet_aton,
+                    AF_INET,
+                    INADDR_ANY,
+                    IPPROTO_IP,
+                    IP_ADD_MEMBERSHIP,
+                    IPPROTO_UDP,
+                    SOCK_DGRAM,
+                    SOL_SOCKET,
+                    SO_REUSEADDR,
+                    socket)
 from typing import List, Tuple
 from warnings import warn
 
@@ -62,8 +74,9 @@ class MidiReceiver(multiprocessing.Process):
         self.received_midi_messages: deque[Tuple[MidiMessagePacket, str]] = deque()  # (packet, source ip address)
         self.received_hello_packets: deque[Tuple[HelloPacket, str]] = deque()  # (packet, source ip address)
         self.received_hello_reply_packets: deque[Tuple[HelloReplyPacket, str]] = deque()  # (packet, address)
-        self.sent_hello_packets: dict[id, float] = dict()  # entries of the form {packet_id: perf_counter timestamp}
-
+        self.sent_hello_packets: dict[id, float] = {}  # entries of the form {packet_id: perf_counter timestamp}
+        self.network_interface_of_sender: None|str = None  # None, "", hostname, or an IPv4 address in dot-decimal notation
+        self.resolve_network_interface_of_sender()
 
     def run(self):
         """Run the MidiReceiver."""
@@ -107,9 +120,13 @@ class MidiReceiver(multiprocessing.Process):
                                     self.save_cpu_time = bool(item.data)
                         elif isinstance(item, InfoMessage):
                             match item.info:
-                                case Information.INTERNAL_HELLO_PACKET_INFO:
+                                case Information.HELLO_PACKET_INFO:
                                     debug_print(f"MidiReceiver: Received internal hello packet information...")
                                     self.store_internal_hello_packet_info(item)
+                                case Information.NETWORK_INTERFACE_OF_SENDING_WORKER:
+                                    debug_print(f"MidiReceiver: Received network interface of sending worker...")
+                                    self.network_interface_of_sender = item.data
+                                    self.resolve_network_interface_of_sender()
                         else:
                             warn(f"MidiReceiver: Invalid command '{item}'.")
                             continue
@@ -134,23 +151,23 @@ class MidiReceiver(multiprocessing.Process):
     def check_and_store_incoming_packets(self):
         """Check for incoming packets and store them."""
         try:
-            data, (source_ip, _) = self.sock.recvfrom(4096)  # buffer size of 4096 bytes
+            data, (remote_ip, _) = self.sock.recvfrom(4096)  # buffer size of 4096 bytes
         except BlockingIOError:
             return  # no data received
         try:
             packet = Packet.from_bytes(data)
-            debug_print(f"MidiReceiver: Received packet from {source_ip} of type {type(packet)}")
+            debug_print(f"MidiReceiver: Received packet from {remote_ip} of type {type(packet)}")
         except ValueError:
-            debug_print(f"MidiReceiver: Received invalid packet from {source_ip}")
+            debug_print(f"MidiReceiver: Received invalid packet from {remote_ip}")
             return
         if isinstance(packet, MidiMessagePacket):
-            self.received_midi_messages.append((packet, source_ip))  # pylint: disable=no-value-for-parameter
+            self.received_midi_messages.append((packet, remote_ip))  # pylint: disable=no-value-for-parameter
         elif isinstance(packet, HelloPacket):
-            self.received_hello_packets.append((packet, source_ip))  # pylint: disable=no-value-for-parameter
+            self.received_hello_packets.append((packet, remote_ip))  # pylint: disable=no-value-for-parameter
         elif isinstance(packet, HelloReplyPacket):
-            self.received_hello_reply_packets.append((packet, source_ip))  # pylint: disable=no-value-for-parameter
+            self.received_hello_reply_packets.append((packet, remote_ip))  # pylint: disable=no-value-for-parameter
         else:
-            debug_print(f"MidiReceiver: Received unknown packet format from {source_ip} of type {type(packet)}")
+            debug_print(f"MidiReceiver: Received unknown packet format from {remote_ip} of type {type(packet)}")
 
 
     def get_midi_output_ports(self):
@@ -164,9 +181,9 @@ class MidiReceiver(multiprocessing.Process):
     def process_hello_packets(self):
         """Process incoming hello packets."""
         while self.received_hello_packets:
-            packet, source_ip = self.received_hello_packets.popleft()
+            packet, remote_ip = self.received_hello_packets.popleft()
             # Inform the sending process about the received hello packet
-            self.sender_queue.put(InfoMessage(Information.NOTIFY_ABOUT_RECEIVED_HELLO_PACKET, (source_ip, packet.id, time.perf_counter())))
+            self.sender_queue.put(InfoMessage(Information.RECEIVED_HELLO_PACKET, (remote_ip, packet.id, time.perf_counter())))
             debug_print(f"MidiReceiver: Received hello packet. Informing sender process...")
             # TODO: Inform main process about available network MIDI devices
         # Delete hello packets information that is older than 5 minutes
@@ -176,12 +193,21 @@ class MidiReceiver(multiprocessing.Process):
     def process_hello_reply_packets(self):
         """Process incoming hello reply packets."""
         while self.received_hello_reply_packets:
-            packet, source_ip = self.received_hello_reply_packets.popleft()
+            packet, remote_ip = self.received_hello_reply_packets.popleft()
+            if packet.id not in self.sent_hello_packets:
+                debug_print(f"MidiReceiver: Received hello reply packet from {remote_ip}, but no corresponding hello packet was sent.")
+                debug_print("MidiReceiver: Ignoring hello reply packet...")
+                continue
+            if packet.remote_ip != self.network_interface_of_sender:
+                debug_print("MidiReceiver: host ip adress {self.network_interface_of_sender} and remote ip adress {packet.remote_ip} do not match.")
+                continue
             send_off_timestamp = self.sent_hello_packets.get(packet.id)
             receive_timestamp = time.perf_counter()
             round_trip_time = receive_timestamp - send_off_timestamp
-            debug_print(f"MidiReceiver: Received hello reply packet from {source_ip}: {packet}")
+            debug_print(f"MidiReceiver: Received hello reply packet from {remote_ip}: {packet}")
             debug_print(f"MidiReceiver: Round trip time: {round_trip_time * 1000:.2f} milliseconds")
+            # TODO: Inform the main process about the round trip time
+            # self.result_queue.put(InfoMessage(Information.ROUND_TRIP_TIME, (packet.id, round_trip_time)))
 
 
     def process_other_packets(self):
@@ -230,3 +256,22 @@ class MidiReceiver(multiprocessing.Process):
         timestamp = message.data[1]
         self.sent_hello_packets[packet_id] = timestamp
         debug_print(f"MidiReceiver: Hello packet information (id = {packet_id}, timestamp = {timestamp})...")
+
+
+    def resolve_network_interface_of_sender(self):
+        """Update the network interface received from the sending worker process.
+        
+        An IPv4 address is kept as is, a hostname is resolved to an IPv4 address,
+        None or an empty string is resolved to the default network interface.
+        """
+        if not self.network_interface_of_sender:
+            self.network_interface_of_sender = gethostbyname(gethostname())
+            return
+        regex = r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}"
+        if not re.match(regex, self.network_interface_of_sender):
+            try:
+                self.network_interface_of_sender = gethostbyname(self.network_interface_of_sender)
+            except gaierror:
+                warn(f"Could not resolve hostname '{self.network_interface_of_sender}'. Using the default interface.")
+                self.network_interface_of_sender = gethostbyname(gethostname())
+            return

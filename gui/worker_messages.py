@@ -92,13 +92,19 @@ class Information(Enum):
 
     Available commands:
 
-        INTERNAL_HELLO_PACKET_INFO:
+        HELLO_PACKET_INFO:
             objective:  Provide information about the just sent hello packet.
                         The hello packet has been created by the sending worker
                         process and has been sent to the network.
-                 data:  tuple (packet id, timestamp as provided by perf_counter)
+                 data:  tuple (local network interface, packet id, timestamp as
+                        provided by perf_counter)
 
-        NOTIFY_ABOUT_RECEIVED_HELLO_PACKET:
+        NETWORK_INTERFACE_OF_SENDING_WORKER:
+            objective:  Provide information about the network interface used
+                        for sending multicast packets.
+                 data:  str (IPv4 address in dot-decimal notation)
+
+        RECEIVED_HELLO_PACKET:
             objective:  Provide information about a just received hello reply
                         packet (received from the network by the receiving
                         worker process). The information is passed to the
@@ -108,8 +114,9 @@ class Information(Enum):
                         as provided by perf_counter)
 """
 
-    INTERNAL_HELLO_PACKET_INFO = auto()
-    NOTIFY_ABOUT_RECEIVED_HELLO_PACKET = auto()
+    HELLO_PACKET_INFO = auto()
+    NETWORK_INTERFACE_OF_SENDING_WORKER = auto()
+    RECEIVED_HELLO_PACKET = auto()
 
 
 class WorkerMessage(ABC):
