@@ -11,15 +11,28 @@ import multiprocessing
 import queue
 import re
 import time
-from socket import gaierror, gethostbyname, inet_aton, AF_INET, IP_MULTICAST_IF, IP_MULTICAST_LOOP, IPPROTO_IP, IPPROTO_UDP, SOCK_DGRAM, socket
+from socket import (gaierror,
+                    gethostbyname,
+                    inet_aton,
+                    AF_INET,
+                    IP_MULTICAST_IF,
+                    IP_MULTICAST_LOOP,
+                    IPPROTO_IP,
+                    IPPROTO_UDP,
+                    SOCK_DGRAM,
+                    socket)
 from typing import List, Tuple
 from warnings import warn
 
 import mido
 from mido.ports import BasePort
 
-from midi_over_lan import MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER, MidiMessagePacket, HelloPacket, HelloReplyPacket
-from worker_messages import Command, CommandMessage, Information, InfoMessage
+from midi_over_lan.midi_over_lan import (MULTICAST_GROUP_ADDRESS,
+                                         MULTICAST_PORT_NUMBER,
+                                         MidiMessagePacket,
+                                         HelloPacket,
+                                         HelloReplyPacket)
+from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
 
 # pylint: disable=line-too-long
 # pylint: disable=no-member

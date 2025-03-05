@@ -63,10 +63,9 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QTableWidgetItem
 
-import midi_over_lan
-from midi_sender import MidiSender
-from midi_receiver import MidiReceiver
-from worker_messages import Command, CommandMessage, ResultMessage
+from midi_over_lan.midi_sender import MidiSender
+from midi_over_lan.midi_receiver import MidiReceiver
+from midi_over_lan.worker_messages import Command, CommandMessage, ResultMessage
 
 # To generate the python file from the ui file, run the following command:
 # pyside6-uic .\MainWidget.ui -o MainWidget.py

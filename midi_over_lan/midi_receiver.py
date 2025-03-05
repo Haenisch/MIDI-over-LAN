@@ -29,8 +29,12 @@ from warnings import warn
 
 import mido
 
-from worker_messages import Command, CommandMessage, Information, InfoMessage, ResultMessage
-from midi_over_lan import MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER, Packet, MidiMessagePacket, HelloPacket, HelloReplyPacket
+from midi_over_lan.midi_over_lan import (MULTICAST_GROUP_ADDRESS,
+                                        MULTICAST_PORT_NUMBER,
+                                        Packet, MidiMessagePacket,
+                                        HelloPacket,
+                                        HelloReplyPacket)
+from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
 
 # pylint: disable=line-too-long
 # pylint: disable=no-member
