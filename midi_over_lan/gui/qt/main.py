@@ -35,6 +35,7 @@ something more meaningful.
 # pylint: disable=pointless-string-statement
 # pylint: disable=wrong-import-position
 # pylint: disable=wrong-import-order
+# pylint: disable=logging-fstring-interpolation
 
 # The GUI is implemented using the PySide6 library, which is a Python binding, and
 # uses the Qt Designer to design the layout of the application.
@@ -53,7 +54,10 @@ something more meaningful.
 # see the documentation of the sender and receiver classes and the
 # worker_messages.py module, respectively.
 
+import atexit
+import logging
 import multiprocessing
+import os.path
 import sys
 import time
 from typing import List, Tuple
@@ -78,10 +82,53 @@ receiver_queue = multiprocessing.Queue()  # Queue for sending commands to the re
 result_queue = multiprocessing.Queue()  # Queue for receiving results from the sender and receiver processes
 
 
-def debug_print(message):
-    """Print the message if the debug flag is set."""
-    if __debug__:
-        print(message)
+# Setup the logger
+
+class JsonLinesFormatter(logging.Formatter):
+    """A custom JSON line formatter."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        """Format the log record as a JSON line."""
+        # From record.filename, extract only the file name without the path.
+        filename = os.path.basename(record.filename)
+        message = record.getMessage().replace('"', '\\"').replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t')
+        output_string = f'{{"asctime": "{self.formatTime(record, self.datefmt)}",' \
+                        f'"filename": "{filename}",' \
+                        f'"funcName": "{record.funcName}",' \
+                        f'"levelname": "{record.levelname}",' \
+                        f'"levelno": "{record.levelno}",' \
+                        f'"lineno": "{record.lineno}",' \
+                        f'"message": "{message}",' \
+                        f'"module": "{record.module}",' \
+                        f'"msecs": "{record.msecs}",' \
+                        f'"name": "{record.name}",' \
+                        f'"process": "{record.process}",' \
+                        f'"processName": "{record.processName}",' \
+                        f'"thread": "{record.thread}",' \
+                        f'"threadName": "{record.threadName}",' \
+                        f'"taskName": "{record.taskName}"}}'
+                        # f'"pathname": "{record.pathname}",' \
+        return output_string
+
+
+logging.basicConfig(level=logging.DEBUG,
+                    # module name is 13 characters long and left justified
+                    format='%(asctime)s,%(msecs)3.0f  %(levelname)s  %(module)-15s  %(lineno)-4d  %(message)s',
+                    datefmt='%H:%M:%S')
+
+handler = logging.FileHandler("log.jsonl")
+handler.setFormatter(JsonLinesFormatter())
+handler.setLevel(logging.DEBUG)
+handler.stream = open("log.jsonl", "a", encoding="utf-8", buffering=1)  # line buffered
+atexit.register(handler.stream.close)
+
+logger = logging.getLogger("midi_over_lan")
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
+
+logger = logging.getLogger("MIDI over LAN GUI")
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 
 def is_input_port_in_use(port_name: str) -> bool:
@@ -143,6 +190,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def add_input_port(self, active: bool, device_name: str, network_name: str):
         """Add the given input port to the table widget and to the internal list of input ports."""
+        logger.debug(f"Add input port: {device_name} ({network_name})")
         # Skip if the port is already in the list.
         for port in self.input_ports:
             if port[1] == device_name:
@@ -156,13 +204,14 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         self.tableWidget_LocalInputPorts.setItem(row, 0, item)
         self.tableWidget_LocalInputPorts.setItem(row, 1, QTableWidgetItem(network_name))
         if is_input_port_in_use(device_name):
-            debug_print(f"Port {device_name} is already in use.")
+            logger.debug(f"Port {device_name} is already in use.")
             item.setForeground(Qt.red)
             item.setToolTip("The input port is already in use by another application.")
 
 
     def pause_sending_process(self):
         """Pause the sending process."""
+        logger.debug('Pause the sending process.')
         sender_queue.put(CommandMessage(Command.PAUSE))
         # Set the style sheet of the label to indicate that the server is paused.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: red;\nborder: 1px solid gray;\nborder-radius: 10px;")
@@ -170,6 +219,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def pause_and_resume_sending_process(self):
         """Pause or resume the sending process."""
+        logger.debug('Pause or resume the sending process.')
         if self.sender_paused:
             self.resume_sending_process()
             self.sender_paused = False
@@ -180,6 +230,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def refresh_input_ports(self):
         """Refresh the list of internal input ports."""
+        logger.debug('Refresh the list of input ports.')
         self.tableWidget_LocalInputPorts.clearContents()
         self.input_ports = []
         for input_port in mido.get_input_names():
@@ -189,7 +240,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def restart_sending_process(self):
         """Shutdown the sending process and restart it."""
-        debug_print('Main: Restart the sending process...')
+        logger.debug('Restart the sending process.')
         # Set the style sheet of the label to indicate that the server is shut down.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: red;\nborder: 1px solid gray;\nborder-radius: 10px;")
         self.repaint()
@@ -201,6 +252,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def resume_sending_process(self):
         """Resume the sending process."""
+        logger.debug('Resume the sending process.')
         sender_queue.put(CommandMessage(Command.RESUME))
         # Set the style sheet of the label to indicate that the server is running.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
@@ -208,11 +260,13 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def run_receiving_process(self):
         """Start the sending process."""
+        logger.debug('Start the receiving process.')
         self.receiver.start()
 
 
     def run_sending_process(self):
         """Start the sending process."""
+        logger.debug('Start the sending process.')
         self.sender.start()
         # Set the style sheet of the label to indicate that the server is running.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
@@ -220,6 +274,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def send_input_ports_to_worker_process(self):
         """Send the list of active input ports to the sender process."""
+        logger.debug('Send input ports to the worker process.')
         # The worker process expects a list of tuples (device_name, network_name).
         # Note, that the active state is not used here (cf. the definition of
         # self.input_ports). Thus, we filter the list accordingly and send only
@@ -230,6 +285,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def select_all_input_ports(self):
         """Select all input ports."""
+        logger.debug('Select all input ports.')
         for row in range(self.tableWidget_LocalInputPorts.rowCount()):
             item = self.tableWidget_LocalInputPorts.item(row, 0)
             self.input_ports[row] = (True, self.input_ports[row][1], self.input_ports[row][2])
@@ -239,6 +295,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def stop_sending_process(self):
         """Stop the sending process."""
+        logger.debug('Stop the sending process.')
         sender_queue.put(CommandMessage(Command.STOP))
         # Set the style sheet of the label to indicate that the server is running.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: red;\nborder: 1px solid gray;\nborder-radius: 10px;")
@@ -246,6 +303,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def toggle_active_input_port(self, item: QTableWidgetItem):
         """Toggle the active state of the input port."""
+        logger.debug('Toggle active input port.')
         row = item.row()
         column = item.column()
         if column == 0:
@@ -263,6 +321,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def unselect_all_input_ports(self):
         """Unselect all input ports."""
+        logger.debug('Unselect all input ports.')
         for row in range(self.tableWidget_LocalInputPorts.rowCount()):
             self.input_ports[row] = (False, self.input_ports[row][1], self.input_ports[row][2])
             item = self.tableWidget_LocalInputPorts.item(row, 0)
@@ -272,6 +331,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def update_midi_clock_handling(self, state: int):
         """Update the ignore MIDI clock state."""
+        logger.debug('Update MIDI clock handling.')
         # The state is either of type 'int' and 0 (unchecked) or 2 (checked),
         # or of type Qt.CheckState and Qt.Unchecked or Qt.Checked.
         if isinstance(state, int):
@@ -283,6 +343,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def update_loopback(self, state: int):
         """Update the loopback state."""
+        logger.debug('Update loopback.')
         # The state is either of type 'int' and 0 (unchecked) or 2 (checked),
         # or of type Qt.CheckState and Qt.Unchecked or Qt.Checked.
         if isinstance(state, int):
@@ -294,7 +355,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def update_network_interface(self):
         """Update the network interface."""
-        debug_print('Main: Update network interface...')
+        logger.debug('Update network interface.')
         text = self.lineEdit_OutgoingTraffic_NetworkInterface.text().strip()
         if text == "" or text.lower() == "default":
             sender_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, None))
@@ -305,6 +366,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def update_network_name(self, item: QTableWidgetItem):
         """Update the device name alias / network name of the input port."""
+        logger.debug('Update network name.')
         row = item.row()
         column = item.column()
         if column == 1:
@@ -317,6 +379,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
     def update_save_cpu_time(self, state: int):
         """Update the save CPU time state."""
+        logger.debug('Update save CPU time.')
         # The state is either of type 'int' and 0 (unchecked) or 2 (checked),
         # or of type Qt.CheckState and Qt.Unchecked or Qt.Checked.
         if isinstance(state, int):

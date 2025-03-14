@@ -5,6 +5,7 @@
 
 """Module for handling incoming MIDI over LAN data."""
 
+import logging
 import multiprocessing
 import queue
 import re
@@ -25,25 +26,24 @@ from socket import (gaierror,
                     SO_REUSEADDR,
                     socket)
 from typing import List, Tuple
-from warnings import warn
 
 import mido
 
 from midi_over_lan.midi_over_lan import (MULTICAST_GROUP_ADDRESS,
-                                        MULTICAST_PORT_NUMBER,
-                                        Packet, MidiMessagePacket,
-                                        HelloPacket,
-                                        HelloReplyPacket)
+                                         MULTICAST_PORT_NUMBER,
+                                         Packet, MidiMessagePacket,
+                                         HelloPacket,
+                                         HelloReplyPacket)
 from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
 
 # pylint: disable=line-too-long
 # pylint: disable=no-member
+# pylint: disable=logging-fstring-interpolation
 
 
-def debug_print(message):
-    """Print the message if the debug flag is set."""
-    if __debug__:
-        print(message)
+logger = logging.getLogger("midi_over_lan")
+logger.addHandler(logging.NullHandler())
+logger.setLevel(logging.INFO)
 
 
 def is_output_port_in_use(port_name: str) -> bool:
@@ -96,43 +96,43 @@ class MidiReceiver(multiprocessing.Process):
                         if isinstance(item, CommandMessage):
                             match item.command:
                                 case Command.RESTART:
-                                    debug_print("MidiReceiver: Restarting...")
+                                    logger.debug("Restarting.")
                                     self.running = False
                                     self.restart = True
                                     break
                                 case Command.PAUSE:
-                                    debug_print("MidiReceiver: Pausing...")
+                                    logger.debug("Pausing.")
                                     self.paused = True
                                 case Command.RESUME:
-                                    debug_print("MidiReceiver: Resuming...")
+                                    logger.debug("Resuming.")
                                     self.resume_sending_midi_messages()
                                 case Command.STOP:
-                                    debug_print("MidiReceiver: Stopping...")
+                                    logger.debug("Stopping.")
                                     self.running = False
                                 case Command.SET_MIDI_OUTPUT_PORTS:
-                                    debug_print(f"MidiReceiver: Setting MIDI input ports '{item.data}'...")
+                                    logger.debug(f"Setting MIDI input ports '{item.data}'.")
                                     # self.set_midi_output_ports(item)  # TODO
                                 case Command.SET_NETWORK_INTERFACE:
-                                    debug_print(f"MidiReceiver: Setting network interface '{item.data}'...")
+                                    logger.debug(f"Setting network interface '{item.data}'.")
                                     self.set_network_interface(item)
                                     # Restart the process to apply the new network interface
                                     self.running = False
                                     self.restart = True
                                     break
                                 case Command.SET_SAVE_CPU_TIME:
-                                    debug_print(f"MidiReceiver: Save CPU time ({bool(item.data)})...")
+                                    logger.debug(f"Save CPU time ({bool(item.data)}).")
                                     self.save_cpu_time = bool(item.data)
                         elif isinstance(item, InfoMessage):
                             match item.info:
                                 case Information.HELLO_PACKET_INFO:
-                                    debug_print(f"MidiReceiver: Received internal hello packet information...")
+                                    logger.debug("Received internal hello packet information.")
                                     self.store_internal_hello_packet_info(item)
                                 case Information.NETWORK_INTERFACE_OF_SENDING_WORKER:
-                                    debug_print(f"MidiReceiver: Received network interface of sending worker...")
+                                    logger.debug("Received network interface of sending worker.")
                                     self.network_interface_of_sender = item.data
                                     self.resolve_network_interface_of_sender()
                         else:
-                            warn(f"MidiReceiver: Invalid command '{item}'.")
+                            logger.warning(f"Invalid command '{item}'.")
                             continue
                     except queue.Empty:
                         pass
@@ -160,9 +160,9 @@ class MidiReceiver(multiprocessing.Process):
             return  # no data received
         try:
             packet = Packet.from_bytes(data)
-            debug_print(f"MidiReceiver: Received packet from {remote_ip} of type {type(packet)}")
+            logger.debug(f"Received packet from {remote_ip} of type {type(packet)}.")
         except ValueError:
-            debug_print(f"MidiReceiver: Received invalid packet from {remote_ip}")
+            logger.debug(f"Received invalid packet from {remote_ip}.")
             return
         if isinstance(packet, MidiMessagePacket):
             self.received_midi_messages.append((packet, remote_ip))  # pylint: disable=no-value-for-parameter
@@ -171,7 +171,7 @@ class MidiReceiver(multiprocessing.Process):
         elif isinstance(packet, HelloReplyPacket):
             self.received_hello_reply_packets.append((packet, remote_ip))  # pylint: disable=no-value-for-parameter
         else:
-            debug_print(f"MidiReceiver: Received unknown packet format from {remote_ip} of type {type(packet)}")
+            logger.warning(f"Received unknown packet format from {remote_ip} of type {type(packet)}.")
 
 
     def get_midi_output_ports(self):
@@ -179,7 +179,7 @@ class MidiReceiver(multiprocessing.Process):
         for port in mido.get_output_names():
             available = not is_output_port_in_use(port)
             self.midi_output_ports.append((available, port))
-            debug_print(f"MidiReceiver: MIDI output port '{port}' is {'available' if available else 'in use'}.")
+            logger.debug(f"MIDI output port '{port}' is {'available' if available else 'in use'}.")
 
 
     def process_hello_packets(self):
@@ -188,7 +188,7 @@ class MidiReceiver(multiprocessing.Process):
             packet, remote_ip = self.received_hello_packets.popleft()
             # Inform the sending process about the received hello packet
             self.sender_queue.put(InfoMessage(Information.RECEIVED_HELLO_PACKET, (remote_ip, packet.id, time.perf_counter())))
-            debug_print(f"MidiReceiver: Received hello packet. Informing sender process...")
+            logger.debug("Received hello packet. Informing sender process.")
             # TODO: Inform main process about available network MIDI devices
         # Delete hello packets information that is older than 5 minutes
         self.sent_hello_packets = {packet_id: timestamp for packet_id, timestamp in self.sent_hello_packets.items() if time.perf_counter() - timestamp < 300}
@@ -199,17 +199,17 @@ class MidiReceiver(multiprocessing.Process):
         while self.received_hello_reply_packets:
             packet, remote_ip = self.received_hello_reply_packets.popleft()
             if packet.id not in self.sent_hello_packets:
-                debug_print(f"MidiReceiver: Received hello reply packet from {remote_ip}, but no corresponding hello packet was sent.")
-                debug_print("MidiReceiver: Ignoring hello reply packet...")
+                logger.debug(f"Received hello reply packet from {remote_ip}, but no corresponding hello packet was sent.")
+                logger.debug("Ignoring hello reply packet.")
                 continue
             if packet.remote_ip != self.network_interface_of_sender:
-                debug_print("MidiReceiver: host ip adress {self.network_interface_of_sender} and remote ip adress {packet.remote_ip} do not match.")
+                logger.debug("Host ip address {self.network_interface_of_sender} and remote ip address {packet.remote_ip} do not match.")
                 continue
             send_off_timestamp = self.sent_hello_packets.get(packet.id)
             receive_timestamp = time.perf_counter()
             round_trip_time = receive_timestamp - send_off_timestamp
-            debug_print(f"MidiReceiver: Received hello reply packet from {remote_ip}: {packet}")
-            debug_print(f"MidiReceiver: Round trip time: {round_trip_time * 1000:.2f} milliseconds")
+            logger.debug(f"Received hello reply packet from {remote_ip}: {packet}")
+            logger.debug(f"Round trip time: {round_trip_time * 1000:.2f} milliseconds")
             # TODO: Inform the main process about the round trip time
             # self.result_queue.put(InfoMessage(Information.ROUND_TRIP_TIME, (packet.id, round_trip_time)))
 
@@ -219,7 +219,7 @@ class MidiReceiver(multiprocessing.Process):
         while self.received_midi_messages:
             packet, addr = self.received_midi_messages.popleft()
             midi_msg = mido.parse(packet.midi_data)
-            debug_print(f"MidiReceiver: Received MIDI message from {addr}: {midi_msg}")
+            logger.debug(f"Received MIDI message from {addr}: {midi_msg}")
 
 
     def setup_socket(self):
@@ -244,7 +244,7 @@ class MidiReceiver(multiprocessing.Process):
                 try:
                     self.interface_ip = gethostbyname(self.interface_ip)
                 except gaierror:
-                    warn(f"Could not resolve hostname '{self.network_interface}'. Using the default interface.")
+                    logger.warning(f"Could not resolve hostname '{self.network_interface}'. Using the default interface.")
                     self.network_interface = None
                     return
                 # Bind to the specific interface
@@ -259,7 +259,7 @@ class MidiReceiver(multiprocessing.Process):
         packet_id = message.data[0]
         timestamp = message.data[1]
         self.sent_hello_packets[packet_id] = timestamp
-        debug_print(f"MidiReceiver: Hello packet information (id = {packet_id}, timestamp = {timestamp})...")
+        logger.debug(f"Hello packet information (id = {packet_id}, timestamp = {timestamp}).")
 
 
     def resolve_network_interface_of_sender(self):
@@ -276,6 +276,6 @@ class MidiReceiver(multiprocessing.Process):
             try:
                 self.network_interface_of_sender = gethostbyname(self.network_interface_of_sender)
             except gaierror:
-                warn(f"Could not resolve hostname '{self.network_interface_of_sender}'. Using the default interface.")
+                logger.warning(f"Could not resolve hostname '{self.network_interface_of_sender}'. Using the default interface.")
                 self.network_interface_of_sender = gethostbyname(gethostname())
             return
