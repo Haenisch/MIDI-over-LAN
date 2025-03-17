@@ -5,11 +5,6 @@
 
 """MIDI over LAN library for Python.
 
-This library contains the packet definitions for the 'MIDI over LAN' protocol
-as well as functions to create and parse these packets. In addition to that,
-a simple console server and client implementation is provided to demonstrate
-the usage of the protocol.
-
 The MIDI over LAN protocol allows sending MIDI messages over a local area
 network to control MIDI devices remotely. The messages are sent as multicast
 packets to all hosts in the network; interested hosts simply listen for these
@@ -140,7 +135,7 @@ Technical details:
 """
 
 # Written by Christoph Hänisch.
-# Last changed on 2025-02-09.
+# Last changed on 2025-03-18.
 # License: LGPL 3 or later (see LICENSE file for details).
 
 # pylint: disable=missing-function-docstring

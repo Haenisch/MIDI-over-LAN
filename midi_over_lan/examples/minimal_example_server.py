@@ -10,7 +10,7 @@
 import socket
 import time
 import mido
-from midi_over_lan import MidiMessagePacket, MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER
+from midi_over_lan.protocol import MidiMessagePacket, MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER
 
 INTERFACE_IP = '192.168.0.50' # Change this to the IP address of the network interface to be used.
 

@@ -54,11 +54,11 @@ something more meaningful.
 # see the documentation of the sender and receiver classes and the
 # worker_messages.py module, respectively.
 
-import atexit
 import logging
 import multiprocessing
 import os.path
 import sys
+import threading
 import time
 from typing import List, Tuple
 
@@ -67,6 +67,7 @@ from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QTableWidgetItem
 
+import midi_over_lan.logging_setup
 from midi_over_lan.midi_sender import MidiSender
 from midi_over_lan.midi_receiver import MidiReceiver
 from midi_over_lan.worker_messages import Command, CommandMessage, ResultMessage
@@ -111,24 +112,24 @@ class JsonLinesFormatter(logging.Formatter):
         return output_string
 
 
-logging.basicConfig(level=logging.DEBUG,
-                    # module name is 13 characters long and left justified
-                    format='%(asctime)s,%(msecs)3.0f  %(levelname)s  %(module)-15s  %(lineno)-4d  %(message)s',
-                    datefmt='%H:%M:%S')
+jsonl_handler = logging.handlers.RotatingFileHandler("log messages.jsonl", encoding="utf-8", maxBytes=1000000, backupCount=5)
+jsonl_handler.setFormatter(JsonLinesFormatter())
+jsonl_handler.setLevel(logging.DEBUG)
 
-handler = logging.FileHandler("log.jsonl")
-handler.setFormatter(JsonLinesFormatter())
-handler.setLevel(logging.DEBUG)
-handler.stream = open("log.jsonl", "a", encoding="utf-8", buffering=1)  # line buffered
-atexit.register(handler.stream.close)
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s  %(levelname)s  %(module)-15s  line %(lineno)-4d  %(message)s')
 
-logger = logging.getLogger("midi_over_lan")
-logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+root = logging.getLogger()
+root.addHandler(jsonl_handler)
 
 logger = logging.getLogger("MIDI over LAN GUI")
-logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
+
+# Create a queue for the log messages. The log_queue has a maximum size of 1000
+# messages. If the queue is full, the worker processes will block until the main
+# process has processed some log messages. Thus, the logger_thread should be
+# created as early as possible.
+log_queue = multiprocessing.Queue(maxsize=1000)
 
 
 def is_input_port_in_use(port_name: str) -> bool:
@@ -149,12 +150,11 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         super().__init__()
         self.setupUi(self)
         self.input_ports: List[Tuple[bool, str, str]] = []  # List of tuples (active, device_name, network_name)
-        self.sender = MidiSender(sender_queue, receiver_queue, result_queue)
+        self.sender = MidiSender(sender_queue, receiver_queue, result_queue, log_queue)
         self.sender_paused = False
-        self.receiver = MidiReceiver(sender_queue, receiver_queue, result_queue)
+        self.receiver = MidiReceiver(sender_queue, receiver_queue, result_queue, log_queue)
         self.run_sending_process()
         self.run_receiving_process()
-
 
         # Setup the table widget.
         self.tableWidget_LocalInputPorts.clearSelection()
@@ -239,7 +239,7 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
 
     def restart_sending_process(self):
-        """Shutdown the sending process and restart it."""
+        """Restart the processing loop of the sending process."""
         logger.debug('Restart the sending process.')
         # Set the style sheet of the label to indicate that the server is shut down.
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: red;\nborder: 1px solid gray;\nborder-radius: 10px;")
@@ -391,10 +391,16 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
 
 def main():
     """Main function."""
+    logger_thread = threading.Thread(target=midi_over_lan.logging_setup.logger_thread, args=(log_queue,))
+    logger_thread.start()
+
     app = QtWidgets.QApplication(sys.argv)
     widget = MainWidget()
     widget.show()
     app.exec()
+
+    log_queue.put(None)
+    logger_thread.join()
 
 
 if __name__ == "__main__":

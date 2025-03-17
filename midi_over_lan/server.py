@@ -38,9 +38,9 @@ except Exception:  # pylint: disable=broad-except
     print("Please install the required dependencies by running 'pip install python-rtmidi mido[ports-rtmidi]' in your shell.")
     sys.exit(1)
 
-from midi_over_lan import (MULTICAST_GROUP_ADDRESS,
-                           MULTICAST_PORT_NUMBER,
-                           MidiMessagePacket)
+from midi_over_lan.protocol import (MULTICAST_GROUP_ADDRESS,
+                                    MULTICAST_PORT_NUMBER,
+                                    MidiMessagePacket)
 
 
 #############################################################################

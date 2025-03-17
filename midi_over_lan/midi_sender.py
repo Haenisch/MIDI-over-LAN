@@ -27,21 +27,19 @@ from typing import List, Tuple
 import mido
 from mido.ports import BasePort
 
-from midi_over_lan.midi_over_lan import (MULTICAST_GROUP_ADDRESS,
-                                         MULTICAST_PORT_NUMBER,
-                                         MidiMessagePacket,
-                                         HelloPacket,
-                                         HelloReplyPacket)
+from midi_over_lan.logging_setup  import init_logger
+from midi_over_lan.protocol import (MULTICAST_GROUP_ADDRESS,
+                                    MULTICAST_PORT_NUMBER,
+                                    MidiMessagePacket,
+                                    HelloPacket,
+                                    HelloReplyPacket)
 from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
 
 # pylint: disable=line-too-long
 # pylint: disable=no-member
 # pylint: disable=logging-fstring-interpolation
 
-
-logger = logging.getLogger("midi_over_lan")
-logger.addHandler(logging.NullHandler())
-logger.setLevel(logging.INFO)
+logger = None  # must be setup by calling init_logger() in the run() method
 
 
 def is_list_of_tuples(data) -> bool:
@@ -63,15 +61,16 @@ def is_list_of_tuples(data) -> bool:
 class MidiSender(multiprocessing.Process):
     """Worker process for sending MIDI over LAN data (MIDI messages, hello packets, etc.)."""
 
-    def __init__(self, sender_queue, receiver_queue, result_queue):
+    def __init__(self, sender_queue, receiver_queue, result_queue, log_queue):
         """Initialize the MidiSender."""
-        super().__init__()
-        self.sock = None  # created in the run() method
-        self.network_interface = None
-        self.enable_multicast_loop = False
+        super().__init__(args=(log_queue,), daemon=True)
         self.sender_queue = sender_queue
         self.receiver_queue = receiver_queue
         self.result_queue = result_queue
+        self.log_queue = log_queue
+        self.sock = None  # created in the run() method
+        self.network_interface = None
+        self.enable_multicast_loop = False
         self.restart = True
         self.running = True
         self.paused = False
@@ -95,6 +94,10 @@ class MidiSender(multiprocessing.Process):
 
     def run(self):
         """Process the commands and send the MIDI messages."""
+
+        global logger  # pylint: disable=global-statement
+        logger = init_logger(self.log_queue, logging.DEBUG)
+
         while self.restart:
             self.restart = False  # Flag can be set via the RESTART command
             with socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) as self.sock:
