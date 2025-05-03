@@ -32,23 +32,23 @@ class Command(Enum):
 
         SET_MIDI_INPUT_PORTS:
             objective:  Set the list of MIDI input ports to be sent.
-                 data:  list of tuples (active, device_name, network_name)
+                 data:  list of tuples (input port name, network name)
 
         SET_MIDI_OUTPUT_PORTS:
             objective:  Set the list of MIDI output ports to be bound.
-                 data:  list of tuples (network_name, device_name)
+                 data:  list of tuples (network name, output port name)
 
         SET_NETWORK_INTERFACE:
-            objective:  Set the network interface for sending multicast packets.
-                 data:  str (IPv4 address or hostname); "" or None for the
-                        default interface
+            objective:  Set the network interface to be used in the worker
+                        processes.
+                 data:  str or None. See below for more information.
 
         SET_ENABLE_LOOPBACK_INTERFACE:
             objective:  Enable or disable the loopback interface.
                  data:  bool
 
         SET_IGNORE_MIDI_CLOCK:
-            objective:  Ignore or process MIDI clock messages.
+            objective:  Ignore MIDI clock messages (if data is set to True).
                  data:  bool
 
         SET_SAVE_CPU_TIME:
@@ -59,21 +59,21 @@ class Command(Enum):
     Note:
     
         - The set of MIDI input ports is a list of tuples, where each tuple
-          contains the actual device name and its user-defined network name as
-          well as a flag indicating whether the port is active. With each call
-          of SET_MIDI_INPUT_PORTS, the internal list of MIDI input ports is
-          replaced.
+          contains the actual MIDI input port name as well as its user-defined
+          network name. With each call of SET_MIDI_INPUT_PORTS, the internal
+          list of MIDI input ports is replaced.
 
         - The set of MIDI output ports is a list of tuples, where each tuple
-          contains the network name (MIDI input ports from the network) and
-          the local MIDI output port name to which the input port is bind
-          (i.e., to which the MIDI messages should be sent). With each call of
+          contains the network name (remote MIDI device) and the local MIDI
+          output port name to which the input port is bound (i.e., to which the
+          MIDI messages should be sent). With each call of
           SET_MIDI_OUTPUT_PORTS, the internal list of MIDI output ports is
           replaced.
-        
-        - If the network interface is set to an empty string or None, the
-          default network interface is used. Each time the interface is set,
-          the previous interface is closed and the new interface is opened.
+
+        - The network interface must be a valid IPv4 address in dot-decimal
+          notation. The receiving worker process may also receive a None value
+          for the network interface. In this case, the worker process binds to
+          all available network interfaces.
     """
     RESTART = auto()
     PAUSE = auto()
@@ -88,27 +88,21 @@ class Command(Enum):
 
 
 class Information(Enum):
-    """Enumeration fpr information messages.
+    """Enumeration for information messages.
 
     Available commands:
 
         HELLO_PACKET_INFO:
-            objective:  Provide information about the just sent hello packet.
+            objective:  Provide information about the recently sent hello packet.
                         The hello packet has been created by the sending worker
                         process and has been sent to the network.
-                 data:  tuple (local network interface, packet id, timestamp as
-                        provided by perf_counter)
-
-        NETWORK_INTERFACE_OF_SENDING_WORKER:
-            objective:  Provide information about the network interface used
-                        for sending multicast packets.
-                 data:  str (IPv4 address in dot-decimal notation)
+                 data:  tuple (packet id, timestamp as provided by perf_counter)
 
         RECEIVED_HELLO_PACKET:
             objective:  Provide information about a just received hello reply
                         packet (received from the network by the receiving
                         worker process). The information is passed to the
-                        sending worker process in order create and send a
+                        sending worker process in order to create and send a
                         corresponding hello reply packet.
                  data:  tuple (ip address of remote host, packet id, timestamp
                         as provided by perf_counter)

@@ -42,17 +42,15 @@ from midi_over_lan.worker_messages import Command, CommandMessage, Information, 
 logger = None  # must be setup by calling init_logger() in the run() method
 
 
-def is_list_of_tuples(data) -> bool:
-    """Check if the data is a list of tuples with two strings."""
+def is_list_of_pairs(data) -> bool:
+    """Check if the data is a list of 2-tuples."""
     # Check if data is a list
     if not isinstance(data, list):
         return False
 
-    # Check if each element is a tuple and if each tuple has two strings
+    # Check if each element is a tuple and if each tuple has two elements
     for item in data:
         if not isinstance(item, tuple) or len(item) != 2:
-            return False
-        if not all(isinstance(element, str) for element in item):
             return False
 
     return True
@@ -69,13 +67,13 @@ class MidiSender(multiprocessing.Process):
         self.result_queue = result_queue
         self.log_queue = log_queue
         self.sock = None  # created in the run() method
-        self.network_interface = None
-        self.enable_multicast_loop = False
+        self.network_interface = "127.0.0.1"
+        self.enable_multicast_loop = True
         self.restart = True
         self.running = True
         self.paused = False
-        self.midi_input_ports: List[Tuple[str, str]]  = []  # List of tuples (device_name, network_name)
-        self.opened_input_ports: List[Tuple[BasePort, str]] = []   # List of tuples (mido port, network_name)
+        self.midi_input_ports: List[Tuple[str, str]]  = []  # List of tuples (input port name, network name)
+        self.opened_input_ports: List[Tuple[BasePort, str]] = []   # List of tuples (mido port, network name)
         self.ignore_midi_clock = True
         self.save_cpu_time = True
         self.timestamp_of_last_hello = None  # time when the last hello packet was sent
@@ -96,7 +94,7 @@ class MidiSender(multiprocessing.Process):
         """Process the commands and send the MIDI messages."""
 
         global logger  # pylint: disable=global-statement
-        logger = init_logger(self.log_queue, logging.DEBUG)
+        logger = init_logger(self.log_queue, level=logging.DEBUG)
 
         while self.restart:
             self.restart = False  # Flag can be set via the RESTART command
@@ -118,7 +116,7 @@ class MidiSender(multiprocessing.Process):
                                     self.paused = True
                                 case Command.RESUME:
                                     logger.debug("Resuming.")
-                                    self.resume_sending_midi_messages()
+                                    self.resume_sending_midi_messages()  # Skip all pending MIDI messages
                                 case Command.STOP:
                                     logger.debug("Stopping.")
                                     self.running = False
@@ -128,20 +126,12 @@ class MidiSender(multiprocessing.Process):
                                 case Command.SET_NETWORK_INTERFACE:
                                     logger.debug(f"Setting network interface '{item.data}'.")
                                     self.set_network_interface(item)
-                                    # Restart the process to apply the new network interface
-                                    self.running = False
-                                    self.restart = True
-                                    break
                                 case Command.SET_ENABLE_LOOPBACK_INTERFACE:
-                                    logger.debug(f"Enable loopback interface ({bool(item.data)}).")
-                                    self.enable_multicast_loop = bool(item.data)
-                                    self.setup_socket()
+                                    self.set_enable_loopback_interface(item)
                                 case Command.SET_IGNORE_MIDI_CLOCK:
-                                    logger.debug(f"Ignoring MIDI clock messages ({bool(item.data)}).")
-                                    self.ignore_midi_clock = bool(item.data)
+                                    self.set_ignore_midi_clock(item)
                                 case Command.SET_SAVE_CPU_TIME:
-                                    logger.debug(f"Save CPU time ({bool(item.data)}).")
-                                    self.save_cpu_time = bool(item.data)
+                                    self.set_save_cpu_time(item)
                         elif isinstance(item, InfoMessage):
                             match item.info:
                                 case Information.RECEIVED_HELLO_PACKET:
@@ -176,27 +166,27 @@ class MidiSender(multiprocessing.Process):
             # ports. Send the entire list of active input ports (network names)
             # to the multicast group. Thus a receiving client can display the
             # available input ports.
-            device_names = [network_name for _, network_name in self.opened_input_ports]  # TODO: Add only the active input ports
+            device_names = [network_name for _, network_name in self.opened_input_ports]
             packet = HelloPacket(device_names=device_names)
             message = InfoMessage(Information.HELLO_PACKET_INFO, (packet.id, time.perf_counter()))
-            self.receiver_queue.put(message)
+            self.receiver_queue.put(message)  # Inform the receiver about the sent hello packet
             try:
                 self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
-            except OSError as e:
-                logger.warning(f"Could not send 'Hello' packet: {e}")
+            except OSError as error:
+                logger.error(f"Could not send 'Hello' packet: {error}")
 
 
     def send_hello_reply_packet(self, item: InfoMessage):
         """Send a hello reply packet to the multicast group."""
-        original_sender_ip, hello_packet_id, _ = item.data
-        logger.debug(f"Sending 'Hello Reply' packet, answering {original_sender_ip}.")
-        packet = HelloReplyPacket(id=hello_packet_id, remote_ip=original_sender_ip)
+        remote_ip, hello_packet_id, _ = item.data
+        logger.debug(f"Sending 'Hello Reply' packet, answering {remote_ip}.")
+        packet = HelloReplyPacket(id=hello_packet_id, remote_ip=remote_ip)
         try:
             self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
-        except OSError as e:
-            logger.warning(f"Could not send 'Hello Reply' packet: {e}")
+        except OSError as error:
+            logger.error(f"Could not send 'Hello Reply' packet: {error}")
         except Exception:  # pylint: disable=broad-except
-            logger.warning("Could not send 'Hello Reply' packet. (UNKNOWN ERROR)")
+            logger.error("Could not send 'Hello Reply' packet. (UNKNOWN ERROR)")
 
 
     def send_midi_messages(self):
@@ -210,57 +200,98 @@ class MidiSender(multiprocessing.Process):
                 logger.debug(packet)
                 try:
                     self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
-                except OSError as e:
-                    logger.warning(f"Could not send MIDI message: {e}")
+                except OSError as error:
+                    logger.error(f"Could not send MIDI message: {error}")
+
+
+    def set_enable_loopback_interface(self, item: CommandMessage):
+        """Enable or disable the loopback interface."""
+        if item.data:
+            logger.debug("Enable loopback interface.")
+            self.enable_multicast_loop = True
+        else:
+            logger.debug("Disable loopback interface.")
+            self.enable_multicast_loop = False
+
+        # Restart the loop to apply the new setting
+        self.restart = True
+        self.running = False
+
+
+    def set_ignore_midi_clock(self, item: CommandMessage):
+        """Ignore or handle MIDI clock messages."""
+        if item.data:
+            logger.debug("Ignore MIDI clock messages.")
+            self.ignore_midi_clock = True
+        else:
+            logger.debug("Do not ignore MIDI clock messages.")
+            self.ignore_midi_clock = False
+
+        # Restart the loop to apply the new setting
+        self.restart = True
+        self.running = False
 
 
     def set_midi_input_ports(self, item: CommandMessage):
         """Set the list of MIDI input ports to be sent."""
 
         # Check the format of the data
-        if not is_list_of_tuples(item.data):
-            logger.debug(f"set_midi_input_ports(): Invalid data format '{item.data}'.")
+        # From worker_messages.py (SET_MIDI_INPUT_PORTS):
+        # data: list of tuples (input port name, network name)
+
+        if not is_list_of_pairs(item.data):
+            logger.error(f"Invalid data format '{item.data}'.")
             return
+
+        self.midi_input_ports = item.data
 
         # Before setting the MIDI input ports, close the currently opened ports
         for port, network_name in self.opened_input_ports:
             port.close()
-        self.midi_input_ports = item.data
 
         # Open the new MIDI input ports
         self.opened_input_ports = []
-        for device_name, network_name in self.midi_input_ports:
+        for input_port_name, network_name in self.midi_input_ports:
             try:
-                port = mido.open_input(device_name)
+                port = mido.open_input(input_port_name)
                 self.opened_input_ports.append((port, network_name))
-            except OSError as e:
-                logger.warning(f"Could not open MIDI input port '{device_name}': {e}")
-                # TODO: Send warning message to the GUI client
+            except OSError as error:
+                logger.error(f"Could not open MIDI input port '{input_port_name}': {error}")
+                # TODO: Send error message to the GUI client
 
 
     def set_network_interface(self, item: CommandMessage):
         """Set the network interface for sending multicast packets.
         
-        The network interface can be given as an IPv4 address or a hostname.
-        More detailed type checking is done in the setup_socket() function.
-        Thus the network_interface attribute is set directly here as long
-        as the data is a non-empty string.
+        The network interface must be given as an IPv4 address. If the address is
+        not valid, the default interface (loopback address) is used.
+         
+        Note, a call to this method will not setup the socket for sending multicast
+        packets. The socket must be setup by calling the setup_socket() method or
+        by restarting the loop in the run() method.
         """
-        network_interface = item.data
-        if isinstance(network_interface, str):
-            network_interface = network_interface.strip()
-            if not network_interface or network_interface.lower() == "default":
-                self.network_interface = None
-            else:
-                self.network_interface = network_interface
-            self.setup_socket()
-        elif network_interface is None:
+        self.network_interface = item.data
+
+        # Check if the network interface is a valid IPv4 address.
+        if isinstance(self.network_interface, str) and re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", self.network_interface.strip()):
             pass
         else:
-            logger.debug(f"set_network_interface()): Expected string, got '{item.data}'.")
-        # Inform the receiver process about the current network interface (needed to
-        # filter incoming hello reply packets which are sent to the multicast group)
-        self.receiver_queue.put(InfoMessage(Information.NETWORK_INTERFACE_OF_SENDING_WORKER, self.network_interface))
+            logger.error(f"Invalid network interface '{self.network_interface}'. Using default interface.")
+            self.network_interface = "127.0.0.0"
+
+        # Restart the loop to apply the new setting
+        self.running = False
+        self.restart = True
+
+
+    def set_save_cpu_time(self, item: CommandMessage):
+        """Save CPU time with the trade-off of a higher latency."""
+        if item.data:
+            logger.debug("Save CPU time.")
+            self.save_cpu_time = True
+        else:
+            logger.debug("Do not save CPU time.")
+            self.save_cpu_time = False
 
 
     def setup_socket(self):
@@ -268,28 +299,23 @@ class MidiSender(multiprocessing.Process):
         if not self.sock:
             return
 
+        # Check if the network interface is a valid IPv4 address.
+        if isinstance(self.network_interface, str) and re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", self.network_interface.strip()):
+            pass
+        else:
+            logger.error(f"Invalid network interface '{self.network_interface}'. Using default interface.")
+            self.network_interface = "127.0.0.0"
+
         # If loopback is enabled, a local client can receive the multicast packets
         if self.enable_multicast_loop:
             self.sock.setsockopt(IPPROTO_IP, IP_MULTICAST_LOOP, 1)
         else:
             self.sock.setsockopt(IPPROTO_IP, IP_MULTICAST_LOOP, 0)
 
-        # Set the network interface
-        if self.network_interface:
-            # Is the network interface given as an IPv4 address?
-            if re.match(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", self.network_interface):
-                pass
-            else:
-                # The network interface must be given as a hostname; try to resolve it
-                try:
-                    self.network_interface = gethostbyname(self.network_interface)
-                except gaierror:
-                    logger.warning(f"Could not resolve hostname '{self.network_interface}'. Using the default interface.")
-                    self.network_interface = None
-                    return
-            try:
-                self.sock.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, inet_aton(self.network_interface))
-            except OSError as e:
-                logger.warning(f"Could not set network interface '{self.network_interface}': {e}")
-                self.network_interface = None
-                return
+        # Set the network interface for sending multicast packets
+        try:
+            self.sock.setsockopt(IPPROTO_IP, IP_MULTICAST_IF, inet_aton(self.network_interface))
+        except OSError as error:
+            logger.error(f"Could not set network interface '{self.network_interface}': {error}")
+            self.network_interface = "127.0.0.0"
+            return

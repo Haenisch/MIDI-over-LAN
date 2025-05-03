@@ -3,6 +3,10 @@
 # It is licensed under the GNU Lesser General Public License v3.0.
 # See the LICENSE file for more details.
 
+# Written by Christoph Hänisch.
+# Version 1
+# Last changed on 2025-05-01.
+
 """MIDI over LAN library for Python.
 
 The MIDI over LAN protocol allows sending MIDI messages over a local area
@@ -40,8 +44,8 @@ Technical details:
     'PacketType' enumeration):
 
         - '0': MIDI Message
-        - '1': Hello
-        - '2': Hello Reply
+        - '1': Hello Message
+        - '2': Hello Reply Message
 
     The payload of the 'MIDI Message' packet contains the device name and the
     actual MIDI message data. The device name is a UTF-8 encoded Pascal like
@@ -55,12 +59,16 @@ Technical details:
     | Device Name Length (1 byte) | Device Name (max. 64 bytes) | MIDI Data (variable length) |
     +-----------------------------+-----------------------------+-----------------------------+
 
-    'Hello' packets packets start with a numeric ID field (a 4-byte integer).
-    Each time a 'Hello' packet is sent, the ID is incremented (on a per-host
-    basis). The 'Hello Reply' packets must contain the same ID as the
-    corresponding 'Hello' packet as well as the IP address of the original
-    sender of the 'Hello' packet (the recipient of the 'Hello Reply' packet)
-    in order to get the assignment right.
+    'Hello' packets start with a numeric ID field (a 4-byte integer). Each time
+    a 'Hello' packet is sent, the ID is incremented; note, each host has its own
+    ID counter that is incremented independently of the other hosts. Once a host
+    receives a 'Hello' packet, it must send a 'Hello Reply' packet back to the
+    sender of the 'Hello' packet. As all messages are mulitcasted to all hosts
+    in the network, the 'Hello Reply' packet must contain the IP address of the
+    original sender of the 'Hello' packet. In addition, the 'Hello Reply' packet
+    must contain the ID of the previous 'Hello' packet in order to allow the
+    sender to match the 'Hello' and 'Hello Reply' packets correctly, even in the
+    event of packet loss.
     
     As 'Hello' and 'Hello Reply' packets may contain a list of device names of
     the hosts that sent the packet, the number of device names is stored in the
@@ -133,10 +141,6 @@ Technical details:
     bytes for Ethernet networks. However, in theory a UDP packet may be as large
     as 65507 bytes.
 """
-
-# Written by Christoph Hänisch.
-# Last changed on 2025-03-18.
-# License: LGPL 3 or later (see LICENSE file for details).
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
@@ -351,11 +355,11 @@ class HelloPacket(Packet):
     def __str__(self):
         """Return a string representation of the Hello packet."""
         if len(self.device_names) == 0:
-            return f"HelloPacket (id = {self.id}) (no device names included)\n"
+            return f"HelloPacket (id = {self.id}) (no device names included)"
         else:
-            output_string = f"HelloPacket (id = {self.id})\n"
+            output_string = f"HelloPacket (id = {self.id})"
             for device_name in self.device_names:
-                output_string += f"  Device name: {device_name}\n"
+                output_string += f"\n  Device name: {device_name}"
             return output_string
 
 
@@ -383,20 +387,34 @@ class HelloPacket(Packet):
 
         if not data.startswith(Packet.HELLO_PACKET_HEADER):
             raise ValueError("Invalid MIDI over LAN packet header")
+        if len(data) < 11:  # header + ID + number of device names + 1 byte for the first device name
+            raise ValueError("Expected at least 5 bytes for the Hello packet")
+        if data[_VERSION_FIELD_INDEX] != VERSION_NUMBER:
+            raise ValueError("Invalid MIDI over LAN packet version")
+        if data[_PACKET_TYPE_INDEX] != PacketType.HELLO:
+            raise ValueError("Invalid MIDI over LAN packet type")
+        if data[_HELLO_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX] > 0 and len(data) < 12:
+            raise ValueError("Expected at least 12 bytes for the Hello packet with device names")
 
         packet = HelloPacket()
-        # ID is the first 4 bytes of the payload
         packet.id = int.from_bytes(data[_HEADER_LENGTH:_HEADER_LENGTH + 4], 'big')
         n = data[_HELLO_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX]  # number of subsequent device names
         if n == 0:
             return packet
         offset = _HELLO_PACKET__FIRST_DEVICE_NAME_INDEX  # includes the 1 byte long length field
         for _ in range(n):
-            string_length = data[offset]
+            try:
+                string_length = data[offset]
+            except IndexError as error:
+                raise ValueError("Invalid MIDI over LAN 'Hello' packet length") from error
+            if string_length > 64:
+                raise ValueError("Device name length exceeds maximum length of 64 bytes")
+            if string_length == 0:
+                raise ValueError("Device name length is zero")
+            if len(data) < offset + 1 + string_length:
+                raise ValueError("Invalid MIDI over LAN packet length; device name length suggests a longer packet")
             start = offset + 1  # index to the start of the device name
             end = start + string_length
-            if end > len(data):
-                raise ValueError("Invalid MIDI over LAN 'Hello' packet length")
             device_name = data[start:end].decode('utf-8').strip('\x00')
             packet.add_device_name(device_name)
             offset = end
@@ -439,11 +457,10 @@ class HelloReplyPacket(Packet):
         """Return a string representation of the Hello Reply packet."""
         output_string = f"HelloReplyPacket (id = {self.id}, recipient = {self.remote_ip})"
         if len(self.device_names) == 0:
-            return output_string + " (no device names included)\n"
+            return output_string + " (no device names included)"
         else:
-            output_string = output_string + "\n"
             for device_name in self.device_names:
-                output_string += f"  Device name: {device_name}\n"
+                output_string += f"\n  Device name: {device_name}"
             return output_string
 
 
@@ -471,6 +488,14 @@ class HelloReplyPacket(Packet):
 
         if not data.startswith(Packet.HELLO_REPLY_PACKET_HEADER):
             raise ValueError("Invalid MIDI over LAN packet header")
+        if len(data) < 15:  # header + ID + IP address + number of device names + 1 byte for the first device name
+            raise ValueError("Expected at least 5 bytes for the Hello Reply packet")
+        if data[_VERSION_FIELD_INDEX] != VERSION_NUMBER:
+            raise ValueError("Invalid MIDI over LAN packet version")
+        if data[_PACKET_TYPE_INDEX] != PacketType.HELLO_REPLY:
+            raise ValueError("Invalid MIDI over LAN packet type")
+        if data[_HELLO_REPLY_PACKET__NUMBER_OF_DEVICE_NAMES_INDEX] > 0 and len(data) < 16:
+            raise ValueError("Expected at least 16 bytes for the Hello Reply packet with device names")
 
         packet = HelloReplyPacket()
         # ID is the first 4 bytes of the payload
@@ -482,11 +507,18 @@ class HelloReplyPacket(Packet):
             return packet
         offset = _HELLO_REPLY_PACKET__FIRST_DEVICE_NAME_INDEX  # includes the 1 byte long length field
         for _ in range(n):
-            string_length = data[offset]
+            try:
+                string_length = data[offset]
+            except IndexError as error:
+                raise ValueError("Invalid MIDI over LAN 'Hello Reply' packet length") from error
+            if string_length > 64:
+                raise ValueError("Device name length exceeds maximum length of 64 bytes")
+            if string_length == 0:
+                raise ValueError("Device name length is zero")
+            if len(data) < offset + 1 + string_length:
+                raise ValueError("Invalid MIDI over LAN packet length; device name length suggests a longer packet")
             start = offset + 1  # index to the start of the device name
             end = start + string_length
-            if end > len(data):
-                raise ValueError("Invalid MIDI over LAN packet length")
             device_name = data[start:end].decode('utf-8').strip('\x00')
             packet.add_device_name(device_name)
             offset = end

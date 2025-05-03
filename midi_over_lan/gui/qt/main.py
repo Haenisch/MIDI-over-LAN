@@ -28,6 +28,8 @@ names on the local machine. However, you can change the network name to
 something more meaningful.
 """
 
+VERSION = "1.0"
+
 # pylint: disable=line-too-long
 # pylint: disable=no-name-in-module
 # pylint: disable=no-member
@@ -57,24 +59,27 @@ something more meaningful.
 import logging
 import multiprocessing
 import os.path
+import re
+import socket
 import sys
 import threading
 import time
 from typing import List, Tuple
 
 import mido
-from PySide6 import QtWidgets
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QTableWidgetItem
-
+from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtWidgets import QApplication, QDialog, QHeaderView, QLabel, QMainWindow, QMessageBox, QTableWidgetItem, QTextEdit, QVBoxLayout, QWidget
 import midi_over_lan.logging_setup
 from midi_over_lan.midi_sender import MidiSender
 from midi_over_lan.midi_receiver import MidiReceiver
 from midi_over_lan.worker_messages import Command, CommandMessage, ResultMessage
 
-# To generate the python file from the ui file, run the following command:
-# pyside6-uic .\MainWidget.ui -o MainWidget.py
-from MainWidget import Ui_MainWidget
+# To generate the python file from the ui file, run either of the following commands:
+# pyside6-uic .\MainWindow.ui -o MainWindow.py
+# poetry run pyside6-uic .\MainWindow.ui -o MainWindow.py
+from MainWindow import Ui_MainWindow
+from SettingsDialog import Ui_Settings
 
 
 # Create queues for communication between the GUI and the worker processes
@@ -119,11 +124,12 @@ jsonl_handler.setLevel(logging.DEBUG)
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s  %(levelname)s  %(module)-15s  line %(lineno)-4d  %(message)s')
 
-root = logging.getLogger()
-root.addHandler(jsonl_handler)
+# root = logging.getLogger()
+# root.addHandler(jsonl_handler)
 
 logger = logging.getLogger("MIDI over LAN GUI")
 logger.setLevel(logging.DEBUG)
+
 
 # Create a queue for the log messages. The log_queue has a maximum size of 1000
 # messages. If the queue is full, the worker processes will block until the main
@@ -142,13 +148,15 @@ def is_input_port_in_use(port_name: str) -> bool:
         return True
 
 
-class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
+class MainWindow(QMainWindow, Ui_MainWindow):
     """Main widget for the GUI."""
 
     def __init__(self):
         """Initialize the main widget."""
         super().__init__()
         self.setupUi(self)
+        self.setWindowTitle("MIDI over LAN")
+        self.menubar.hide()
         self.input_ports: List[Tuple[bool, str, str]] = []  # List of tuples (active, device_name, network_name)
         self.sender = MidiSender(sender_queue, receiver_queue, result_queue, log_queue)
         self.sender_paused = False
@@ -156,13 +164,13 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         self.run_sending_process()
         self.run_receiving_process()
 
-        # Setup the table widget.
+        # Set up the table widget.
         self.tableWidget_LocalInputPorts.clearSelection()
-        self.tableWidget_LocalInputPorts.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.Stretch)
-        self.tableWidget_LocalInputPorts.horizontalHeader().setSectionResizeMode(1, QtWidgets.QHeaderView.Stretch)
+        self.tableWidget_LocalInputPorts.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.tableWidget_LocalInputPorts.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tableWidget_LocalInputPorts.setSortingEnabled(False)
         self.tableWidget_LocalInputPorts.itemClicked.connect(self.toggle_active_input_port)
-        self.tableWidget_LocalInputPorts.itemChanged.connect(self.update_network_name)
+        self.tableWidget_LocalInputPorts.itemChanged.connect(self.update_network_names)
 
         # Connect the GUI elements to the functions.
         self.pushButton_LocalInputPorts_SelectAll.clicked.connect(self.select_all_input_ports)
@@ -170,13 +178,29 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         self.pushButton_LocalInputPorts_Refresh.clicked.connect(self.refresh_input_ports)
         self.pushButton_OutgoingTraffic_Restart.clicked.connect(self.restart_sending_process)
         self.pushButton_OutgoingTraffic_PauseResume.clicked.connect(self.pause_and_resume_sending_process)
-        self.lineEdit_OutgoingTraffic_NetworkInterface.editingFinished.connect(self.update_network_interface)
-        self.checkBox_OutgoingTraffic_EnableLoopback.stateChanged.connect(self.update_loopback)
         self.checkBox_OutgoingTraffic_IgnoreMidiClock.stateChanged.connect(self.update_midi_clock_handling)
-        self.checkBox_OutgoingTraffic_SaveCpuTime.stateChanged.connect(self.update_save_cpu_time)
+
+        # Set up the dialogs (preferences, help, etc.) now, as they are referenced below.
+        self.setup_dialogs()
+
+        ## Set up the menu bar.
+        self.action_Quit.triggered.connect(self.close)
+        self.action_Preferences.triggered.connect(self.show_settings_dialog)
+        self.action_About.triggered.connect(lambda: QMessageBox.information(self, "About", f"MIDI over LAN\nVersion {VERSION}\n(c) 2025 Christoph Hänisch"))
+
+        # Add global shortcuts.
+        self.shortcut_Quit = QShortcut(QKeySequence("Ctrl+Q"), self)
+        self.shortcut_Quit.activated.connect(self.close)
+        self.shortcut_Help = QShortcut(QKeySequence("F1"), self)
+        self.shortcut_Help.activated.connect(lambda: QMessageBox.information(self, "About", f"MIDI over LAN\nVersion {VERSION}\n(c) 2025 Christoph Hänisch"))
+        self.shortcut_Preferences = QShortcut(QKeySequence("Ctrl+P"), self)
+        self.shortcut_Preferences.activated.connect(self.settings_dialog.show)
 
         # Add the input ports to the list.
         self.refresh_input_ports()
+
+        # Initialization finished.
+        self.statusbar.addWidget(QLabel("   Ready   "))
 
 
     def __del__(self):
@@ -207,6 +231,18 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
             logger.debug(f"Port {device_name} is already in use.")
             item.setForeground(Qt.red)
             item.setToolTip("The input port is already in use by another application.")
+
+
+    def keyPressEvent(self, event):  # pylint: disable=invalid-name
+        """Handle key press events. In particular, show the menu bar when the Alt key is pressed."""
+        if event.key() == Qt.Key_Alt:
+            self.menubar.show()
+
+
+    def keyReleaseEvent(self, event):  # pylint: disable=invalid-name
+        """Handle key release events. In particular, hide the menu bar when the Alt key is released."""
+        if event.key() == Qt.Key_Alt:
+            self.menubar.hide()
 
 
     def pause_sending_process(self):
@@ -272,6 +308,13 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         self.label_OutgoingTraffic_ServerStatus.setStyleSheet("background-color: green;\nborder: 1px solid gray;\nborder-radius: 10px;")
 
 
+    def show_settings_dialog(self):
+        """Show the settings dialog."""
+        logger.debug('Show settings dialog.')
+        self.settings_dialog.show()
+        self.settings_dialog.raise_()
+
+
     def send_input_ports_to_worker_process(self):
         """Send the list of active input ports to the sender process."""
         logger.debug('Send input ports to the worker process.')
@@ -292,6 +335,14 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
             item.setCheckState(Qt.Checked)
         self.send_input_ports_to_worker_process()
 
+
+    def setup_dialogs(self):
+        """Setup the settings dialog and the help/about dialog."""
+        logger.debug('Setup the dialogs.')
+        self.settings_dialog = SettingsDialog(parent=self)
+        # self.help_dialog = HelpDialog(parent=self)
+        # self.about_dialog = AboutDialog(parent=self)
+        
 
     def stop_sending_process(self):
         """Stop the sending process."""
@@ -341,6 +392,33 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         sender_queue.put(CommandMessage(Command.SET_IGNORE_MIDI_CLOCK, state))
 
 
+    def update_network_names(self, item: QTableWidgetItem):
+        """Update the device name alias / network name of the input port."""
+        logger.debug('Update network names of the input ports.')
+        row = item.row()
+        column = item.column()
+        if column == 1:
+            active = self.input_ports[row][0]
+            device_name = self.input_ports[row][1]
+            network_name = item.text()
+            self.input_ports[row] = (active, device_name, network_name)
+            self.send_input_ports_to_worker_process()
+
+
+class SettingsDialog(QDialog, Ui_Settings):
+    """Settings dialog for the GUI."""
+
+    def __init__(self, parent: QWidget = None):
+        """Initialize the settings dialog."""
+        super().__init__(parent=parent)
+        self.setupUi(self)
+        self.lineEdit_NetworkInterface.editingFinished.connect(self.update_network_interface)
+        self.checkBox_EnableLoopback.stateChanged.connect(self.update_loopback)
+        self.checkBox_SaveCpuTime.stateChanged.connect(self.update_save_cpu_time)
+        self.lineEdit_NetworkInterface.setText(socket.gethostname())
+        self.hide()
+
+
     def update_loopback(self, state: int):
         """Update the loopback state."""
         logger.debug('Update loopback.')
@@ -356,25 +434,22 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
     def update_network_interface(self):
         """Update the network interface."""
         logger.debug('Update network interface.')
-        text = self.lineEdit_OutgoingTraffic_NetworkInterface.text().strip()
-        if text == "" or text.lower() == "default":
-            sender_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, None))
-        else:
-            sender_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, text))
-        sender_queue.put(CommandMessage(Command.RESTART))
-
-
-    def update_network_name(self, item: QTableWidgetItem):
-        """Update the device name alias / network name of the input port."""
-        logger.debug('Update network name.')
-        row = item.row()
-        column = item.column()
-        if column == 1:
-            active = self.input_ports[row][0]
-            device_name = self.input_ports[row][1]
-            network_name = item.text()
-            self.input_ports[row] = (active, device_name, network_name)
-            self.send_input_ports_to_worker_process()
+        text = self.lineEdit_NetworkInterface.text()
+        # Check if the text is a valid hostname or a valid IPv4 address in dot-decimal notation.
+        try:
+            ip_address = socket.gethostbyname(text)
+        except socket.gaierror:
+            # If the hostname cannot be resolved, try to get the IP address of the local host.
+            try:
+                ip_address = socket.gethostbyname(socket.gethostname())
+            except socket.gaierror:
+                ip_address = '127.0.0.1'  # fallback to localhost
+            logger.warning(f"Invalid network interface: {text} Use {ip_address} instead.")
+            QMessageBox.warning(self, "Invalid network interface", "Invalid network interface: {text}")
+            self.lineEdit_NetworkInterface.setText(ip_address)
+        # Set the ip address used in the worker processes.
+        sender_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, ip_address))
+        receiver_queue.put(CommandMessage(Command.SET_NETWORK_INTERFACE, ip_address))
 
 
     def update_save_cpu_time(self, state: int):
@@ -387,6 +462,56 @@ class MainWidget(QtWidgets.QWidget, Ui_MainWidget):
         else:
             state = state == Qt.Checked
         sender_queue.put(CommandMessage(Command.SET_SAVE_CPU_TIME, state))
+        receiver_queue.put(CommandMessage(Command.SET_SAVE_CPU_TIME, state))
+
+
+class DebugMessagesWindow(QDialog):
+    """Debug message window for the GUI."""
+
+    def __init__(self, parent: QWidget = None):
+        """Initialize the debug message window."""
+        super().__init__(parent=parent)
+        self.setWindowTitle("Debug Messages")
+        self.setGeometry(100, 100, 800, 600)
+        self.layout = QVBoxLayout(self)
+        self.textEdit = QTextEdit(self)
+        self.textEdit.setReadOnly(True)
+        self.textEdit.setGeometry(0, 0, 800, 600)
+        self.textEdit.append("Debug messages:\n")
+        self.layout.addWidget(self.textEdit)
+        self.setLayout(self.layout)
+
+    def add_message(self, message: str):
+        """Add a message to the debug message window."""
+        self.textEdit.append(message)
+        self.textEdit.verticalScrollBar().setValue(self.textEdit.verticalScrollBar().maximum())
+
+
+class DebugMessagesWindow_LoggingHandler(logging.Handler):
+    """A custom logging handler that sends log messages to a Qt widget."""
+
+    def __init__(self, debug_messages_window: DebugMessagesWindow):
+        """Initialize the handler with the given Qt widget."""
+        super().__init__()
+        self.debug_messages_window = debug_messages_window
+
+    def emit(self, record):
+        """Emit a log record to the Qt widget."""
+        log_entry = self.format(record)
+        if record.levelno < 10:
+            text_color = "black"
+        elif record.levelno < 20:
+            text_color = "blue"
+        elif record.levelno < 30:
+            text_color = "green"
+        elif record.levelno < 40:
+            text_color = "orange"
+        elif record.levelno < 50:
+            text_color = "red"
+        else:
+            text_color = "purple"
+        log_entry = f'<font color="{text_color}">{record.asctime} - {record.levelname} - {record.module} - line {record.lineno} - {record.message}</font>'
+        self.debug_messages_window.add_message(log_entry)
 
 
 def main():
@@ -394,9 +519,17 @@ def main():
     logger_thread = threading.Thread(target=midi_over_lan.logging_setup.logger_thread, args=(log_queue,))
     logger_thread.start()
 
-    app = QtWidgets.QApplication(sys.argv)
-    widget = MainWidget()
-    widget.show()
+    app = QApplication(sys.argv)
+
+    debug_messages_window = DebugMessagesWindow()
+    debug_messages_window.show()
+    debug_messages_window_logging_handler = DebugMessagesWindow_LoggingHandler(debug_messages_window)
+    debug_messages_window_logging_handler.setLevel(logging.DEBUG)
+    root = logging.getLogger()
+    root.addHandler(debug_messages_window_logging_handler)
+
+    window = MainWindow()
+    window.show()
     app.exec()
 
     log_queue.put(None)
