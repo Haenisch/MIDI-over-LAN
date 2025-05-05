@@ -24,12 +24,12 @@ import midi_over_lan.logging_setup
 
 logger_thread = None
 
-# Create a queue for the log messages. The log_queue has a maximum size of 1000
+# Create a queue for the log messages. The log_queue has a maximum size of 10000
 # messages. If the queue is full, the worker processes will block until the main
 # process has processed some log messages. Thus, the logger_thread should be
 # created as early as possible.
 
-log_queue = multiprocessing.Queue(maxsize=1000)
+log_queue = multiprocessing.Queue(maxsize=10000)
 
 
 class JsonLinesFormatter(logging.Formatter):

@@ -16,6 +16,7 @@
 # pylint: disable=invalid-name
 
 import logging
+from PySide6.QtCore import QObject, Signal, Slot
 from PySide6.QtWidgets import QDialog, QWidget, QVBoxLayout, QTextEdit
 
 
@@ -29,7 +30,7 @@ class DebugMessagesDialog(QDialog):
         """Initialize the debug message window."""
         super().__init__(parent=parent)
         self.setWindowTitle("Debug Messages")
-        self.setGeometry(0, 0, 1000, 800)
+        self.setGeometry(0, 0, 1200, 800)
         self.layout = QVBoxLayout(self)
         self.textEdit = QTextEdit(self)
         self.textEdit.setReadOnly(True)
@@ -37,19 +38,37 @@ class DebugMessagesDialog(QDialog):
         self.layout.addWidget(self.textEdit)
         self.setLayout(self.layout)
 
+    @Slot(str)
     def add_message(self, message: str):
         """Add a message to the debug message window."""
         self.textEdit.append(message)
-        # self.textEdit.verticalScrollBar().setValue(self.textEdit.verticalScrollBar().maximum())
+        self.textEdit.verticalScrollBar().setValue(self.textEdit.verticalScrollBar().maximum())
+
+
+class SignalProxy(QObject):
+    """A proxy class that emits Qt signals.
+    
+    This class is used to emit signals from the below logging handler to the Qt
+    GUI. It is necessary because a) there is a name clash with the emit method
+    of the logging.Handler class and b) the logging handler runs in a different
+    thread and updating the GUI from a different thread is not allowed in Qt.
+    """
+    signal = Signal(str)
 
 
 class LoggingHandler(logging.Handler):
-    """A custom logging handler that sends all log messages to the debug message dialog."""
+    """A custom logging handler that sends all log messages to the debug message dialog.
+    
+    Note, the signal proxy member is used to emit the log messages to the Qt GUI
+    (see SignalProxy for more details). The messageReceived signal must be
+    connected to the add_message slot of the DebugMessagesDialog class.
+    """
 
     def __init__(self, debug_messages_dialog: DebugMessagesDialog):
         """Initialize the handler with the given Qt widget."""
         super().__init__()
         self.debug_messages_dialog = debug_messages_dialog
+        self.messageReceived = SignalProxy()
 
     def emit(self, record):
         """Emit a log record to the Qt widget."""
@@ -67,4 +86,4 @@ class LoggingHandler(logging.Handler):
         else:  # CRITICAL
             text_color = "purple"
         log_entry = f'<font color="{text_color}">{record.asctime} - {record.levelname} - {record.module} - line {record.lineno} - {record.message}</font>'
-        self.debug_messages_dialog.add_message(log_entry)
+        self.messageReceived.signal.emit(log_entry)
