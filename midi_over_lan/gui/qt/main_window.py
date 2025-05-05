@@ -241,7 +241,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.debug_messages_dialog = DebugMessagesDialog()
         self.debug_messages_logging_handler = LoggingHandler(self.debug_messages_dialog)
         self.debug_messages_logging_handler.setLevel(logging.DEBUG)
-        self.debug_messages_logging_handler.messageReceived.signal.connect(self.debug_messages_dialog.add_message, Qt.QueuedConnection)
+        self.debug_messages_logging_handler.logRecordReceived.signal.connect(self.debug_messages_dialog.add_message, Qt.QueuedConnection)
         root = logging.getLogger()
         root.addHandler(self.debug_messages_logging_handler)
 
