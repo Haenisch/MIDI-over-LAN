@@ -38,6 +38,7 @@ import multiprocessing
 
 
 def init_logger(log_queue: multiprocessing.Queue,
+                name='midi_over_lan',
                 level=logging.CRITICAL) -> logging.Logger:
     """Initialize the logger in a worker process.
 
@@ -50,8 +51,13 @@ def init_logger(log_queue: multiprocessing.Queue,
     The log queue is a multiprocessing.Queue object that should be instantiated
     in the main process.
     
-    Once initialized, the logger can be used as usual. The logger name is set
-    to 'midi_over_lan' and the log level is set to the given level.
+    Once initialized, the logger can be used as usual. By default, the logger
+    name is set to 'midi_over_lan' but can be changed by passing a different
+    name (e.g., 'midi_over_lan.sender' or 'midi_over_lan.receiver'). The logger
+    is set to propagate messages to the root logger, which is the default
+    behavior of the logging module. The log level is set to the given level,
+    which is CRITICAL by default. This means that only log messages with a level
+    of CRITICAL or higher will be processed.
 
     Example:
         ```python
@@ -63,13 +69,14 @@ def init_logger(log_queue: multiprocessing.Queue,
 
     Args:
         log_queue (multiprocessing.Queue): The log queue to send log messages to.
+        name (str): The name of the logger. Default is 'midi_over_lan'.
         level (int): The log level to set for the logger. Default is logging.DEBUG.
 
     Returns:
         logging.Logger: The logger object that uses the given log queue.
     """
     handler = logging.handlers.QueueHandler(log_queue)
-    logger = logging.getLogger('midi_over_lan')
+    logger = logging.getLogger(name)
     logger.propagate = False
     logger.setLevel(level)
     logger.addHandler(handler)

@@ -128,7 +128,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableWidget_LocalInputPorts.setItem(row, 0, item)
         self.tableWidget_LocalInputPorts.setItem(row, 1, QTableWidgetItem(network_name))
         if is_input_port_in_use(device_name):
-            logger.debug(f"Port {device_name} is already in use.")
+            logger.info(f"Port {device_name} is already in use.")
             item.setForeground(Qt.red)
             item.setToolTip("The input port is already in use by another application.")
 

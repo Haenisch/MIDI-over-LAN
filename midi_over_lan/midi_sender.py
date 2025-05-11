@@ -94,7 +94,7 @@ class MidiSender(multiprocessing.Process):
         """Process the commands and send the MIDI messages."""
 
         global logger  # pylint: disable=global-statement
-        logger = init_logger(self.log_queue, level=logging.DEBUG)
+        logger = init_logger(self.log_queue, name="midi_over_lan.sender", level=logging.DEBUG)
 
         while self.restart:
             self.restart = False  # Flag can be set via the RESTART command

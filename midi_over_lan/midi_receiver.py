@@ -32,9 +32,11 @@ import mido
 from midi_over_lan.logging_setup  import init_logger
 from midi_over_lan.protocol import (MULTICAST_GROUP_ADDRESS,
                                     MULTICAST_PORT_NUMBER,
-                                    Packet, MidiMessagePacket,
+                                    Packet,
+                                    MidiMessagePacket,
                                     HelloPacket,
-                                    HelloReplyPacket)
+                                    HelloReplyPacket,
+                                    packet_type_to_string)
 from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
 
 # pylint: disable=line-too-long
@@ -82,7 +84,7 @@ class MidiReceiver(multiprocessing.Process):
         """Process incoming MIDI over LAN data."""
 
         global logger  # pylint: disable=global-statement
-        logger = init_logger(self.log_queue, level=logging.DEBUG)
+        logger = init_logger(self.log_queue, name='midi_over_lan.receiver', level=logging.DEBUG)
 
         while self.restart:
             self.restart = False  # Flag can be set via the RESTART command
@@ -149,7 +151,7 @@ class MidiReceiver(multiprocessing.Process):
             return  # no data received
         try:
             packet = Packet.from_bytes(data)
-            logger.debug(f"Received packet from {remote_ip} of type {type(packet)}.")
+            logger.debug(f"Received packet from {remote_ip} of type '{packet_type_to_string.get(packet.packet_type)}'.")
         except ValueError:
             logger.warning(f"Received invalid packet from {remote_ip}.")
             return
@@ -175,6 +177,8 @@ class MidiReceiver(multiprocessing.Process):
         """Process incoming hello packets."""
         while self.received_hello_packets:
             packet, remote_ip = self.received_hello_packets.popleft()
+            if packet.hostname == 'unknown':
+                packet.hostname = remote_ip
             # Inform the sending process about the received hello packet
             self.sender_queue.put(InfoMessage(Information.RECEIVED_HELLO_PACKET, (remote_ip, packet.id, time.perf_counter())))
             logger.debug("Received hello packet. Informing sender process.")
@@ -191,6 +195,8 @@ class MidiReceiver(multiprocessing.Process):
             if packet.remote_ip != self.network_interface:
                 logger.debug(f"Local ip address {self.network_interface} and remote ip address {packet.remote_ip} do not match. Skipping packet.")
                 continue
+            if packet.hostname == 'unknown':
+                packet.hostname = remote_ip
             if packet.id not in self.sent_hello_packets:
                 logger.warning(f"Received 'Hello Reply' packet from {remote_ip}, but no corresponding 'Hello' packet was sent!?")
                 logger.warning("Ignoring 'Hello Reply' packet.")
@@ -198,8 +204,8 @@ class MidiReceiver(multiprocessing.Process):
             send_off_timestamp = self.sent_hello_packets.get(packet.id)
             receive_timestamp = time.perf_counter()
             round_trip_time = receive_timestamp - send_off_timestamp
-            logger.debug(f"Received 'Hello Reply' packet from {remote_ip}: {packet}")
-            logger.debug(f"Round trip time: {round_trip_time * 1000:.2f} milliseconds")
+            logger.info(f"Received 'Hello Reply' packet from {remote_ip}: {packet}")
+            logger.info(f"Round trip time: {round_trip_time * 1000:.2f} milliseconds")
             # TODO: Inform the main process about the round trip time
             # self.result_queue.put(InfoMessage(Information.ROUND_TRIP_TIME, (packet.id, round_trip_time)))
 
