@@ -13,8 +13,6 @@ import struct
 import time
 from collections import deque
 from socket import (gaierror,
-                    gethostbyname,
-                    gethostname,
                     inet_aton,
                     AF_INET,
                     INADDR_ANY,
@@ -277,7 +275,7 @@ class MidiReceiver(multiprocessing.Process):
                 self.sock.bind((self.network_interface, MULTICAST_PORT_NUMBER))
                 mreq = struct.pack("4s4s", inet_aton(MULTICAST_GROUP_ADDRESS), inet_aton(self.network_interface))
                 self.sock.setsockopt(IPPROTO_IP, IP_ADD_MEMBERSHIP, mreq)
-            except gaierror as error:
+            except (gaierror, OSError) as error:
                 logger.error(f"Failed to bind to network interface '{self.network_interface}': {error}")
                 logger.error("Binding to all interfaces.")
                 self.network_interface = None

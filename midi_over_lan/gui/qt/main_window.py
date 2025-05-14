@@ -40,6 +40,10 @@ from version import VERSION
 logger=logging.getLogger('midi_over_lan')  # pylint: disable=invalid-name
 
 
+##################################################################################################
+# Helper functions
+##################################################################################################
+
 def is_input_port_in_use(port_name: str) -> bool:
     """Check if a MIDI input port is already open."""
     try:
@@ -49,6 +53,10 @@ def is_input_port_in_use(port_name: str) -> bool:
         # in case of an IOError, the port is probably already open
         return True
 
+
+##################################################################################################
+# Main Window
+##################################################################################################
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Main widget for the GUI."""

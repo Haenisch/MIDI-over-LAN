@@ -12,9 +12,7 @@ import multiprocessing
 import queue
 import re
 import time
-from socket import (gaierror,
-                    gethostbyname,
-                    inet_aton,
+from socket import (inet_aton,
                     AF_INET,
                     IP_MULTICAST_IF,
                     IP_MULTICAST_LOOP,
@@ -72,8 +70,8 @@ class MidiSender(multiprocessing.Process):
         self.restart = True
         self.running = True
         self.paused = False
-        self.midi_input_ports: List[Tuple[str, str]]  = []  # List of tuples (input port name, network name)
-        self.opened_input_ports: List[Tuple[BasePort, str]] = []   # List of tuples (mido port, network name)
+        self.midi_input_ports: List[Tuple[str, str]]  = []  # List of tuples (input port name, MIDI device's network name)
+        self.opened_input_ports: List[Tuple[BasePort, str]] = []   # List of tuples (mido port, MIDI device's network name)
         self.ignore_midi_clock = True
         self.save_cpu_time = True
         self.timestamp_of_last_hello = None  # time when the last hello packet was sent
@@ -162,11 +160,12 @@ class MidiSender(multiprocessing.Process):
         if (timestamp is None) or (now - timestamp >= 10):
             logger.debug("Sending 'Hello' packet.")
             self.timestamp_of_last_hello = now
-            # A 'Hello' packet may contain a list of active device names / input
-            # ports. Send the entire list of active input ports (network names)
-            # to the multicast group. Thus a receiving client can display the
-            # available input ports.
-            device_names = [network_name for _, network_name in self.opened_input_ports]
+            # A 'Hello' packet may include a list of local MIDI devices whose
+            # MIDI data is broadcast to the multicast group. This list contains
+            # the user-defined network names of the devices, allowing a
+            # receiving client to display the available input ports in a GUI,
+            # for example.
+            device_names = [device_name for _, device_name in self.opened_input_ports]
             packet = HelloPacket(device_names=device_names)
             message = InfoMessage(Information.HELLO_PACKET_INFO, (packet.id, time.perf_counter()))
             self.receiver_queue.put(message)  # Inform the receiver about the sent hello packet
@@ -191,12 +190,12 @@ class MidiSender(multiprocessing.Process):
 
     def send_midi_messages(self):
         """Poll the MIDI input ports and send the message(s) to the multicast address."""
-        for port, network_name in self.opened_input_ports:
+        for port, device_name in self.opened_input_ports:
             for message in port.iter_pending():
                 if self.ignore_midi_clock and message.type == 'clock':
                     continue
                 logger.debug(f"Sending MIDI message ({message}).")
-                packet = MidiMessagePacket(device_name=network_name, midi_data=bytes(message.bytes()))
+                packet = MidiMessagePacket(device_name=device_name, midi_data=bytes(message.bytes()))
                 logger.debug(packet)
                 try:
                     self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
@@ -246,15 +245,15 @@ class MidiSender(multiprocessing.Process):
         self.midi_input_ports = item.data
 
         # Before setting the MIDI input ports, close the currently opened ports
-        for port, network_name in self.opened_input_ports:
+        for port, device_name in self.opened_input_ports:
             port.close()
 
         # Open the new MIDI input ports
         self.opened_input_ports = []
-        for input_port_name, network_name in self.midi_input_ports:
+        for input_port_name, device_name in self.midi_input_ports:
             try:
                 port = mido.open_input(input_port_name)
-                self.opened_input_ports.append((port, network_name))
+                self.opened_input_ports.append((port, device_name))
             except OSError as error:
                 logger.error(f"Could not open MIDI input port '{input_port_name}': {error}")
                 # TODO: Send error message to the GUI client

@@ -500,7 +500,16 @@ class MidiMessagePacket(Packet):
 
 @dataclass
 class HelloPacket(Packet):
-    """Data class for a Hello packet."""
+    """Data class for a Hello packet.
+    
+    Public fields:
+        - packet_type: The type of the packet (Hello).
+        - id: The ID of the packet (incremented with each Hello packet sent).
+        - hostname: The hostname of the local machine or 'unknown'.
+        - number_of_device_names: The number of device names included in the packet.
+        - device_names: A list of local MIDI devices whose data is broadcast.
+        - header: The header of the packet (without the device name).
+    """
     packet_type: int = PacketType.HELLO.value
     id: int = field(init=False)
     hostname: str = field(default_factory=get_hostname)  # hostname of the local machine
@@ -576,6 +585,15 @@ class HelloPacket(Packet):
 @dataclass
 class HelloReplyPacket(Packet):
     """Data class for a Hello Reply packet.
+
+    Public fields:
+        - packet_type: The type of the packet (Hello Reply).
+        - id: The ID of the corresponding Hello packet.
+        - remote_ip: The IP address of the original sender of the Hello packet.
+        - hostname: The hostname of the local machine or 'unknown'.
+        - number_of_device_names: The number of device names included in the packet.
+        - device_names: A list of local MIDI devices whose data is broadcast.
+        - header: The header of the packet (without the device name).
     
     Example:
 

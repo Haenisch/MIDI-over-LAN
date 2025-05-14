@@ -23,6 +23,7 @@ import logging
 import multiprocessing
 import socket
 
+from functools import cache
 from PySide6.QtWidgets import QDialog, QWidget, QMessageBox
 from PySide6.QtCore import Qt
 
@@ -32,6 +33,31 @@ from ui_settings_dialog import Ui_Settings
 
 logger=logging.getLogger('midi_over_lan')  # pylint: disable=invalid-name
 
+
+##################################################################################################
+# Helper functions
+##################################################################################################
+
+@cache
+def get_local_ip_address():
+    """Retrieve the local host's IP address that is used for routing to the internet."""
+    # from: https://stackoverflow.com/questions/166506
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(0)
+    try:
+        # doesn't even have to be reachable
+        sock.connect(('10.254.254.254', 1))
+        ip_address = sock.getsockname()[0]
+    except Exception:  # pylint: disable=broad-except
+        ip_address = '127.0.0.1'
+    finally:
+        sock.close()
+    return ip_address
+
+
+##################################################################################################
+# SettingsDialog
+##################################################################################################
 
 class SettingsDialog(QDialog, Ui_Settings):
     """Settings dialog for the GUI."""
@@ -51,7 +77,7 @@ class SettingsDialog(QDialog, Ui_Settings):
         self.lineEdit_NetworkInterface.editingFinished.connect(self.update_network_interface)
         self.checkBox_EnableLoopback.stateChanged.connect(self.update_loopback)
         self.checkBox_SaveCpuTime.stateChanged.connect(self.update_save_cpu_time)
-        self.lineEdit_NetworkInterface.setText(socket.gethostname())
+        self.lineEdit_NetworkInterface.setText(get_local_ip_address())
         self.update_network_interface()
 
 
@@ -79,7 +105,7 @@ class SettingsDialog(QDialog, Ui_Settings):
             try:
                 ip_address = socket.gethostbyname(socket.gethostname())
             except socket.gaierror:
-                ip_address = '127.0.0.1'  # fallback to localhost
+                ip_address = get_local_ip_address()  # falls back to localhost ('127.0.0.1') in case of failure
             logger.warning(f"Invalid network interface: {text} Use {ip_address} instead.")
             QMessageBox.warning(self, "Invalid network interface", "Invalid network interface: {text}")
             self.lineEdit_NetworkInterface.setText(ip_address)

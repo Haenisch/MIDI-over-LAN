@@ -82,6 +82,16 @@ class DebugMessagesDialog(QDialog, Ui_DebugMessages):
     def set_loglevel(self, loglevel: int):
         """Set the log level of the debug message window."""
         self.displayed_log_level = loglevel
+        # TODO: The below code does not seem to have any effect. Maybe define worker messages
+        # in the logging setup module and set the log level there... 
+        logger_names = ('midi_over_lan',
+                        'midi_over_lan.protocol',
+                        'midi_over_lan.midi_sender',
+                        'midi_over_lan.midi_receiver',
+                        'midi_over_lan.gui')
+        for logger_name in logger_names:
+            logger = logging.getLogger(logger_name)  # pylint: disable=redefined-outer-name
+            logger.setLevel(loglevel)
 
 
     def set_scroll_to_bottom(self, state: int):
