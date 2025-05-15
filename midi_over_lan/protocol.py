@@ -186,7 +186,7 @@ def ip_address_to_bytes(ip_address: str) -> bytes:
     # Do the actual conversion
     try:
         # Split the IP address into its components and convert each component to a byte
-        return b''.join(int(octet).to_bytes() for octet in ip_address.split('.'))
+        return b''.join(int(octet).to_bytes(length=1, byteorder='big') for octet in ip_address.split('.'))
     except ValueError as error:
         logger.error(f"Invalid IP address: {ip_address}")
         raise ValueError("Invalid IP address") from error
@@ -223,7 +223,7 @@ def to_pascal_like_byte_string(string: str) -> bytes:
     with a maximum length of 64 bytes.
     """
     byte_string = to_byte_string(string, 64, encoding='utf-8')
-    return len(byte_string).to_bytes() + byte_string
+    return len(byte_string).to_bytes(length=1, byteorder='big') + byte_string
 
 
 class Parser():
@@ -495,7 +495,7 @@ class MidiMessagePacket(Packet):
     def to_bytes(self):
         """Return the MIDI message packet as a byte string (e.g., for using it in a UDP packet)."""
         device_name = to_byte_string(self.device_name, 64)
-        return self.header + len(device_name).to_bytes() + device_name + self.midi_data
+        return self.header + len(device_name).to_bytes(length=1, byteorder='big') + device_name + self.midi_data
 
 
 @dataclass
@@ -576,7 +576,7 @@ class HelloPacket(Packet):
         data = self.header + \
                self.id.to_bytes(4, 'big') + \
                to_pascal_like_byte_string(self.hostname) + \
-               len(self.device_names).to_bytes()
+               len(self.device_names).to_bytes(length=1, byteorder='big')
         for device_name in self.device_names:
             data += to_pascal_like_byte_string(device_name)
         return data
@@ -677,7 +677,7 @@ class HelloReplyPacket(Packet):
                self.id.to_bytes(4, 'big') + \
                ip_address_to_bytes(self.remote_ip) + \
                to_pascal_like_byte_string(self.hostname) + \
-               len(self.device_names).to_bytes()
+               len(self.device_names).to_bytes(length=1, byteorder='big')
         for device_name in self.device_names:
             data += to_pascal_like_byte_string(device_name)
         return data
