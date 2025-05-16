@@ -57,7 +57,7 @@ from main_window import MainWindow
 # Create queues for communication between the GUI and the worker processes
 sender_queue = multiprocessing.Queue()  # Queue for sending commands to the sender process
 receiver_queue = multiprocessing.Queue()  # Queue for sending commands to the receiver process
-result_queue = multiprocessing.Queue()  # Queue for receiving results from the sender and receiver processes
+gui_queue = multiprocessing.Queue()  # Queue for receiving results from the sender and receiver processes
 
 
 def main():
@@ -69,16 +69,16 @@ def main():
 
     # Start the sender and receiver processes
     logger.debug('Start the sending process.')
-    sender = MidiSender(sender_queue, receiver_queue, result_queue, log_queue)
+    sender = MidiSender(sender_queue, receiver_queue, gui_queue, log_queue)
     sender.start()
     logger.debug('Start the receiving process.')
-    receiver = MidiReceiver(sender_queue, receiver_queue, result_queue, log_queue)
+    receiver = MidiReceiver(sender_queue, receiver_queue, gui_queue, log_queue)
     receiver.start()
 
     # Start the main GUI
     logger.debug('Start the GUI.')
     app = QApplication(sys.argv)
-    window = MainWindow(sender_queue, receiver_queue, result_queue)
+    window = MainWindow(sender_queue, receiver_queue, gui_queue)
     window.show()
     app.exec()
 

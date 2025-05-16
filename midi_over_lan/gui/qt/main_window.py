@@ -23,14 +23,17 @@
 import logging
 import multiprocessing
 import time
+from functools import cache
+from socket import gethostbyaddr, gethostname
+from statistics import median
 from typing import List, Tuple
 
 import mido
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimerEvent
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QHeaderView, QLabel, QMainWindow, QMessageBox, QTableWidgetItem
 
-from midi_over_lan.worker_messages import Command, CommandMessage
+from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
 from ui_main_window import Ui_MainWindow
 from settings_dialog import SettingsDialog
 from debug_messages_dialog import DebugMessagesDialog, LoggingHandler
@@ -43,6 +46,22 @@ logger=logging.getLogger('midi_over_lan')  # pylint: disable=invalid-name
 ##################################################################################################
 # Helper functions
 ##################################################################################################
+
+@cache
+def get_hostname(string: str) -> str:
+    """Get the hostname for the given string.
+
+    The string can be either a hostname or an IPv4 address.
+    """
+    try:
+        name = gethostbyaddr(string)[0]
+    except Exception:  # pylint: disable=broad-except
+        try:
+            name = gethostname()
+        except Exception:  # pylint: disable=broad-except
+            name = 'unknown'
+    return name
+
 
 def is_input_port_in_use(port_name: str) -> bool:
     """Check if a MIDI input port is already open."""
@@ -61,7 +80,7 @@ def is_input_port_in_use(port_name: str) -> bool:
 class MainWindow(QMainWindow, Ui_MainWindow):
     """Main widget for the GUI."""
 
-    def __init__(self, sender_queue: multiprocessing.Queue, receiver_queue: multiprocessing.Queue, result_queue: multiprocessing.Queue):
+    def __init__(self, sender_queue: multiprocessing.Queue, receiver_queue: multiprocessing.Queue, ui_queue: multiprocessing.Queue):
         """Initialize the main widget."""
         super().__init__()
         self.setupUi(self)
@@ -69,7 +88,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.menubar.hide()
         self.sender_queue = sender_queue
         self.receiver_queue = receiver_queue
-        self.result_queue = result_queue
+        self.ui_queue = ui_queue
         self.sender_paused = False
         self.receiver_paused = False
         self.input_ports: List[Tuple[bool, str, str]] = []  # List of tuples (active, device_name, network_name)
@@ -115,9 +134,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Add the input ports to the list.
         self.refresh_input_ports()
 
+        # Process the UI message queue every second.
+        self.timer = self.startTimer(1000)  # 1000 ms
+        self.timerEvent = self.process_ui_message_queue
+
         # Initialization finished.
         self.statusbar.addWidget(QLabel("   Ready   "))
-
 
 
     def add_input_port(self, active: bool, device_name: str, network_name: str):
@@ -170,6 +192,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.pause_sending_process()
             self.sender_paused = True
+
+
+    def process_ui_message_queue(self, event: QTimerEvent):
+        """Process the UI message queue every second."""
+        while not self.ui_queue.empty():
+            message = self.ui_queue.get()
+            if isinstance(message, InfoMessage):
+                if message.info == Information.ROUND_TRIP_TIMES:
+                    logger.debug('Got a message update for the round trip times.')
+                    self.update_round_trip_times(message.data)
+            else:
+                logger.warning(f"Unexpected or unknown message: {message}")
 
 
     def refresh_input_ports(self):
@@ -242,7 +276,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         logger.debug('Setup the dialogs.')
 
         # Set up the settings dialog
-        self.settings_dialog = SettingsDialog(self.sender_queue, self.receiver_queue, self.result_queue, parent=self)
+        self.settings_dialog = SettingsDialog(self.sender_queue, self.receiver_queue, self.ui_queue, parent=self)
         self.settings_dialog.hide()
 
         # Set up the debug messages dialog
@@ -252,7 +286,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.debug_messages_logging_handler.logRecordReceived.signal.connect(self.debug_messages_dialog.add_message, Qt.QueuedConnection)
         root = logging.getLogger()
         root.addHandler(self.debug_messages_logging_handler)
-
 
 
     def stop_sending_process(self):
@@ -314,3 +347,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             network_name = item.text()
             self.input_ports[row] = (active, device_name, network_name)
             self.send_input_ports_to_worker_process()
+
+
+    def update_round_trip_times(self, round_trip_times: List[Tuple[str, float]]):
+        """Update the round trip times in the table widget."""
+        logger.debug('Update round trip times.')
+        for ip_address, rtt in round_trip_times.items():
+            hostname = get_hostname(ip_address)
+            # Check if the hostname is already in the table widget.
+            found = False
+            for row in range(self.tableWidget_RTT.rowCount()):
+                item = self.tableWidget_RTT.item(row, 0)
+                if item is not None and item.text() == hostname:
+                    found = True
+                    break
+            if not found:
+                # Add a new row to the table widget.
+                self.tableWidget_RTT.setRowCount(self.tableWidget_RTT.rowCount() + 1)
+                row = self.tableWidget_RTT.rowCount() - 1
+                self.tableWidget_RTT.setItem(row, 0, QTableWidgetItem(hostname))
+                self.tableWidget_RTT.setItem(row, 1, QTableWidgetItem(""))
+                self.tableWidget_RTT.setItem(row, 2, QTableWidgetItem(""))
+                self.tableWidget_RTT.setItem(row, 3, QTableWidgetItem(""))
+            # Update the existing row.
+            item = self.tableWidget_RTT.item(row, 1)
+            item.setText(f"{1000 * min(rtt):.2f}")
+            item = self.tableWidget_RTT.item(row, 2)
+            item.setText(f"{1000 * max(rtt):.2f}")
+            item = self.tableWidget_RTT.item(row, 3)
+            item.setText(f"{1000 * median(rtt):.2f}")

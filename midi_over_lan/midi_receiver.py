@@ -58,12 +58,12 @@ class MidiReceiver(multiprocessing.Process):
     """Worker process for handling incoming MIDI over LAN data."""
 
 
-    def __init__(self, sender_queue, receiver_queue, result_queue, log_queue):
+    def __init__(self, sender_queue, receiver_queue, ui_queue, log_queue):
         """Initialize the MidiReceiver."""
         super().__init__(args=(log_queue,), daemon=True)
         self.sender_queue = sender_queue
         self.receiver_queue = receiver_queue
-        self.result_queue = result_queue
+        self.ui_queue = ui_queue
         self.log_queue = log_queue
         self.sock = None  # create the socket in the run() method
         self.network_interface = None  # default: bind to all interfaces
@@ -75,8 +75,9 @@ class MidiReceiver(multiprocessing.Process):
         self.midi_output_ports: List[bool, str] = []  # List of tuples (available, port_name)
         self.received_midi_messages: deque[Tuple[MidiMessagePacket, str]] = deque()  # (packet, remote ip address)
         self.received_hello_packets: deque[Tuple[HelloPacket, str]] = deque()  # (packet, remote ip address)
-        self.received_hello_reply_packets: deque[Tuple[HelloReplyPacket, str]] = deque()  # (packet, remote ip address)
-        self.sent_hello_packets: dict[id, float] = {}  # entries of the form {packet_id: perf_counter timestamp}
+        self.received_hello_reply_packets: deque[Tuple[HelloReplyPacket, str]] = deque()  # (packet, remote ip address [sender of the hello reply packet])
+        self.sent_hello_packets_timestamps: dict[int, float] = {}  # entries of the form {packet_id: perf_counter timestamp}
+        self.round_trip_times: dict[str, deque[float]] = {}  # round trip times for the various ip addresses; limit to 100 entries
 
     def run(self):
         """Process incoming MIDI over LAN data."""
@@ -183,29 +184,34 @@ class MidiReceiver(multiprocessing.Process):
             # TODO: Inform main process about available network MIDI devices
 
         # Delete hello packets information that is older than 5 minutes
-        self.sent_hello_packets = {packet_id: timestamp for packet_id, timestamp in self.sent_hello_packets.items() if time.perf_counter() - timestamp < 300}
+        self.sent_hello_packets_timestamps = {packet_id: timestamp for packet_id, timestamp in self.sent_hello_packets_timestamps.items() if time.perf_counter() - timestamp < 300}
 
 
     def process_hello_reply_packets(self):
         """Process incoming 'Hello Reply' packets."""
         while self.received_hello_reply_packets:
-            packet, remote_ip = self.received_hello_reply_packets.popleft()
-            if packet.remote_ip != self.network_interface:
-                logger.debug(f"Local ip address {self.network_interface} and remote ip address {packet.remote_ip} do not match. Skipping packet.")
+            packet, remote_ip = self.received_hello_reply_packets.popleft()  # remote_ip is the sender of the hello reply packet
+            origin_ip = packet.remote_ip  # the ip address of the original sender of the hello packet
+            if origin_ip != self.network_interface:
+                logger.debug(f"Local IP address {self.network_interface} and origin IP address {origin_ip} do not match. Skipping packet.")
                 continue
             if packet.hostname == 'unknown':
                 packet.hostname = remote_ip
-            if packet.id not in self.sent_hello_packets:
+            if packet.id not in self.sent_hello_packets_timestamps:
                 logger.warning(f"Received 'Hello Reply' packet from {remote_ip}, but no corresponding 'Hello' packet was sent!?")
                 logger.warning("Ignoring 'Hello Reply' packet.")
                 continue
-            send_off_timestamp = self.sent_hello_packets.get(packet.id)
+            send_off_timestamp = self.sent_hello_packets_timestamps.get(packet.id)
             receive_timestamp = time.perf_counter()
             round_trip_time = receive_timestamp - send_off_timestamp
             logger.info(f"Received 'Hello Reply' packet from {remote_ip}: {packet}")
             logger.info(f"Round trip time: {round_trip_time * 1000:.2f} milliseconds")
-            # TODO: Inform the main process about the round trip time
-            # self.result_queue.put(InfoMessage(Information.ROUND_TRIP_TIME, (packet.id, round_trip_time)))
+            # Store the round trip time for the remote ip address
+            if remote_ip not in self.round_trip_times:
+                self.round_trip_times[remote_ip] = deque(maxlen=100)
+            self.round_trip_times[remote_ip].append(round_trip_time)
+            # Inform the main process about the round trip times
+            self.ui_queue.put(InfoMessage(Information.ROUND_TRIP_TIMES, self.round_trip_times))
 
 
     def process_other_packets(self):
@@ -291,5 +297,5 @@ class MidiReceiver(multiprocessing.Process):
         """Store the information for the sent hello packet provided by the sender process."""
         packet_id = message.data[0]
         timestamp = message.data[1]
-        self.sent_hello_packets[packet_id] = timestamp
+        self.sent_hello_packets_timestamps[packet_id] = timestamp
         logger.debug(f"Hello packet information (id = {packet_id}, timestamp = {timestamp}).")

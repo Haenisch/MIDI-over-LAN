@@ -104,13 +104,23 @@ class Information(Enum):
                         worker process). The information is passed to the
                         sending worker process in order to create and send a
                         corresponding hello reply packet.
-                 data:  tuple (ip address of remote host, packet id, timestamp
+                 data:  tuple (IP address of remote host, packet id, timestamp
                         as provided by perf_counter)
+
+        ROUND_TRIP_TIMES:
+            objective:  Provide information about the round trip times between
+                        the local host and the various remote hosts. The round
+                        trip time is the time between sending a hello packet and
+                        receiving the corresponding hello reply packet.
+                 data:  dict[str, deque[float]] where the key is the IP address of the
+                        remote host and the value is a deque of round trip times
+                        (in seconds) for the last 100 hello packets sent to the
+                        remote host.
 """
 
     HELLO_PACKET_INFO = auto()
-    NETWORK_INTERFACE_OF_SENDING_WORKER = auto()
     RECEIVED_HELLO_PACKET = auto()
+    ROUND_TRIP_TIMES = auto()
 
 
 class WorkerMessage(ABC):
@@ -129,9 +139,3 @@ class InfoMessage(WorkerMessage):
     """Info message."""
     info: Information
     data: any = None
-
-
-@dataclass
-class ResultMessage(WorkerMessage):
-    """Result message."""
-    result: any

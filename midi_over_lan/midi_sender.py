@@ -57,12 +57,12 @@ def is_list_of_pairs(data) -> bool:
 class MidiSender(multiprocessing.Process):
     """Worker process for sending MIDI over LAN data (MIDI messages, hello packets, etc.)."""
 
-    def __init__(self, sender_queue, receiver_queue, result_queue, log_queue):
+    def __init__(self, sender_queue, receiver_queue, ui_queue, log_queue):
         """Initialize the MidiSender."""
         super().__init__(args=(log_queue,), daemon=True)
         self.sender_queue = sender_queue
         self.receiver_queue = receiver_queue
-        self.result_queue = result_queue
+        self.ui_queue = ui_queue
         self.log_queue = log_queue
         self.sock = None  # created in the run() method
         self.network_interface = "127.0.0.1"
@@ -177,8 +177,9 @@ class MidiSender(multiprocessing.Process):
 
     def send_hello_reply_packet(self, item: InfoMessage):
         """Send a hello reply packet to the multicast group."""
-        remote_ip, hello_packet_id, _ = item.data
-        logger.debug(f"Sending 'Hello Reply' packet, answering {remote_ip}.")
+        remote_ip, hello_packet_id, time_of_arrival = item.data  # remote_ip is the IP address of the original sender of the hello packet
+        logger.debug(f"Sending 'Hello Reply' packet (id = {hello_packet_id}), answering {remote_ip}.")
+        logger.debug(f"Internal transmission time: {(time.perf_counter() - time_of_arrival) * 1000:.2f} milliseconds.")
         packet = HelloReplyPacket(id=hello_packet_id, remote_ip=remote_ip)
         try:
             self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))

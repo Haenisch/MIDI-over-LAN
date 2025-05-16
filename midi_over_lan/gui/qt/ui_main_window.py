@@ -234,10 +234,6 @@ class Ui_MainWindow(object):
         __qtablewidgetitem6.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
         __qtablewidgetitem6.setFont(font);
         self.tableWidget_RTT.setHorizontalHeaderItem(4, __qtablewidgetitem6)
-        if (self.tableWidget_RTT.rowCount() < 1):
-            self.tableWidget_RTT.setRowCount(1)
-        __qtablewidgetitem7 = QTableWidgetItem()
-        self.tableWidget_RTT.setVerticalHeaderItem(0, __qtablewidgetitem7)
         self.tableWidget_RTT.setObjectName(u"tableWidget_RTT")
         self.tableWidget_RTT.horizontalHeader().setStretchLastSection(True)
         self.tableWidget_RTT.verticalHeader().setVisible(False)
@@ -332,9 +328,7 @@ class Ui_MainWindow(object):
         ___qtablewidgetitem5 = self.tableWidget_RTT.horizontalHeaderItem(3)
         ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"Average RTT", None));
         ___qtablewidgetitem6 = self.tableWidget_RTT.horizontalHeaderItem(4)
-        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"Lost Packets", None));
-        ___qtablewidgetitem7 = self.tableWidget_RTT.verticalHeaderItem(0)
-        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"0", None));
+        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"Graph", None));
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_Statistics), QCoreApplication.translate("MainWindow", u"Sta&tistics", None))
         self.menu_File.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
         self.menu_Help.setTitle(QCoreApplication.translate("MainWindow", u"&Help", None))
