@@ -391,6 +391,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             item.setText(f"{median_value:.2f}")
             item = self.tableWidget_RTT.item(row, 4)
             item.setText(f"{average_value:.2f}")
+            item = self.tableWidget_RTT.item(row, 5)
+            item.setText("")
 
             # Update the line chart.
             if len(rtt) >= 3:
