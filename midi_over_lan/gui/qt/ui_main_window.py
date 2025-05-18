@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'main_window.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(640, 515)
+        MainWindow.resize(668, 522)
         self.action_Quit = QAction(MainWindow)
         self.action_Quit.setObjectName(u"action_Quit")
         icon = QIcon(QIcon.fromTheme(QIcon.ThemeIcon.ApplicationExit))
@@ -74,12 +74,18 @@ class Ui_MainWindow(object):
         self.tableWidget_LocalInputPorts.setObjectName(u"tableWidget_LocalInputPorts")
         palette = QPalette()
         brush = QBrush(QColor(0, 218, 105, 255))
-        brush.setStyle(Qt.SolidPattern)
-        palette.setBrush(QPalette.Active, QPalette.Highlight, brush)
-        palette.setBrush(QPalette.Active, QPalette.Accent, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Highlight, brush)
-        palette.setBrush(QPalette.Inactive, QPalette.Accent, brush)
-        palette.setBrush(QPalette.Disabled, QPalette.Accent, brush)
+        brush.setStyle(Qt.BrushStyle.SolidPattern)
+        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight, brush)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+        palette.setBrush(QPalette.ColorGroup.Active, QPalette.ColorRole.Accent, brush)
+#endif
+        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Highlight, brush)
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+        palette.setBrush(QPalette.ColorGroup.Inactive, QPalette.ColorRole.Accent, brush)
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+        palette.setBrush(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Accent, brush)
+#endif
         self.tableWidget_LocalInputPorts.setPalette(palette)
         self.tableWidget_LocalInputPorts.setEditTriggers(QAbstractItemView.EditTrigger.CurrentChanged|QAbstractItemView.EditTrigger.DoubleClicked|QAbstractItemView.EditTrigger.EditKeyPressed|QAbstractItemView.EditTrigger.SelectedClicked)
         self.tableWidget_LocalInputPorts.horizontalHeader().setVisible(True)
@@ -212,8 +218,8 @@ class Ui_MainWindow(object):
         self.gridLayout_9 = QGridLayout(self.groupBox_RTT)
         self.gridLayout_9.setObjectName(u"gridLayout_9")
         self.tableWidget_RTT = QTableWidget(self.groupBox_RTT)
-        if (self.tableWidget_RTT.columnCount() < 5):
-            self.tableWidget_RTT.setColumnCount(5)
+        if (self.tableWidget_RTT.columnCount() < 6):
+            self.tableWidget_RTT.setColumnCount(6)
         __qtablewidgetitem2 = QTableWidgetItem()
         __qtablewidgetitem2.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
         __qtablewidgetitem2.setFont(font);
@@ -234,6 +240,10 @@ class Ui_MainWindow(object):
         __qtablewidgetitem6.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
         __qtablewidgetitem6.setFont(font);
         self.tableWidget_RTT.setHorizontalHeaderItem(4, __qtablewidgetitem6)
+        __qtablewidgetitem7 = QTableWidgetItem()
+        __qtablewidgetitem7.setTextAlignment(Qt.AlignLeading|Qt.AlignVCenter);
+        __qtablewidgetitem7.setFont(font);
+        self.tableWidget_RTT.setHorizontalHeaderItem(5, __qtablewidgetitem7)
         self.tableWidget_RTT.setObjectName(u"tableWidget_RTT")
         self.tableWidget_RTT.horizontalHeader().setStretchLastSection(True)
         self.tableWidget_RTT.verticalHeader().setVisible(False)
@@ -250,7 +260,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 640, 33))
+        self.menubar.setGeometry(QRect(0, 0, 668, 33))
         self.menu_File = QMenu(self.menubar)
         self.menu_File.setObjectName(u"menu_File")
         self.menu_Help = QMenu(self.menubar)
@@ -318,17 +328,19 @@ class Ui_MainWindow(object):
         self.label_OutgoingTraffic_ServerStatus.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_OutgoingTraffic), QCoreApplication.translate("MainWindow", u"&Outgoing Traffic", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_IncomingTraffic), QCoreApplication.translate("MainWindow", u"&Incoming Traffic", None))
-        self.groupBox_RTT.setTitle(QCoreApplication.translate("MainWindow", u"Round-Trip Times", None))
+        self.groupBox_RTT.setTitle(QCoreApplication.translate("MainWindow", u"Round-Trip Times (in milliseconds)", None))
         ___qtablewidgetitem2 = self.tableWidget_RTT.horizontalHeaderItem(0)
         ___qtablewidgetitem2.setText(QCoreApplication.translate("MainWindow", u"Hostname", None));
         ___qtablewidgetitem3 = self.tableWidget_RTT.horizontalHeaderItem(1)
-        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"Minimum RTT", None));
+        ___qtablewidgetitem3.setText(QCoreApplication.translate("MainWindow", u"Minimum", None));
         ___qtablewidgetitem4 = self.tableWidget_RTT.horizontalHeaderItem(2)
-        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"Maximum RTT", None));
+        ___qtablewidgetitem4.setText(QCoreApplication.translate("MainWindow", u"Maximum", None));
         ___qtablewidgetitem5 = self.tableWidget_RTT.horizontalHeaderItem(3)
-        ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"Average RTT", None));
+        ___qtablewidgetitem5.setText(QCoreApplication.translate("MainWindow", u"Median", None));
         ___qtablewidgetitem6 = self.tableWidget_RTT.horizontalHeaderItem(4)
-        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"Graph", None));
+        ___qtablewidgetitem6.setText(QCoreApplication.translate("MainWindow", u"Average", None));
+        ___qtablewidgetitem7 = self.tableWidget_RTT.horizontalHeaderItem(5)
+        ___qtablewidgetitem7.setText(QCoreApplication.translate("MainWindow", u"Graph", None));
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_Statistics), QCoreApplication.translate("MainWindow", u"Sta&tistics", None))
         self.menu_File.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
         self.menu_Help.setTitle(QCoreApplication.translate("MainWindow", u"&Help", None))

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>640</width>
-    <height>515</height>
+    <width>668</width>
+    <height>522</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -360,7 +360,7 @@ border-radius: 10px;</string>
         <item row="0" column="0">
          <widget class="QGroupBox" name="groupBox_RTT">
           <property name="title">
-           <string>Round-Trip Times</string>
+           <string>Round-Trip Times (in milliseconds)</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_9">
            <item row="0" column="0">
@@ -386,7 +386,7 @@ border-radius: 10px;</string>
              </column>
              <column>
               <property name="text">
-               <string>Minimum RTT</string>
+               <string>Minimum</string>
               </property>
               <property name="font">
                <font>
@@ -399,7 +399,7 @@ border-radius: 10px;</string>
              </column>
              <column>
               <property name="text">
-               <string>Maximum RTT</string>
+               <string>Maximum</string>
               </property>
               <property name="font">
                <font>
@@ -412,7 +412,20 @@ border-radius: 10px;</string>
              </column>
              <column>
               <property name="text">
-               <string>Average RTT</string>
+               <string>Median</string>
+              </property>
+              <property name="font">
+               <font>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="textAlignment">
+               <set>AlignLeading|AlignVCenter</set>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Average</string>
               </property>
               <property name="font">
                <font>
@@ -452,7 +465,7 @@ border-radius: 10px;</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>640</width>
+     <width>668</width>
      <height>33</height>
     </rect>
    </property>

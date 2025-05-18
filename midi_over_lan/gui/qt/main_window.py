@@ -375,23 +375,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.tableWidget_RTT.setItem(row, 1, QTableWidgetItem(""))
                 self.tableWidget_RTT.setItem(row, 2, QTableWidgetItem(""))
                 self.tableWidget_RTT.setItem(row, 3, QTableWidgetItem(""))
-                self.tableWidget_RTT.setItem(row, 4, QTableWidgetItem("Collecting data..."))
+                self.tableWidget_RTT.setItem(row, 4, QTableWidgetItem(""))
+                self.tableWidget_RTT.setItem(row, 5, QTableWidgetItem("Collecting data..."))
 
             # Update the existing row.
-            minimum = min(rtt) * 1000
-            maximum = max(rtt) * 1000
+            minimum_value = min(rtt) * 1000
+            maximum_value = max(rtt) * 1000
+            median_value = median(rtt) * 1000
+            average_value = sum(rtt) / len(rtt) * 1000
             item = self.tableWidget_RTT.item(row, 1)
-            item.setText(f"{minimum:.2f}")
+            item.setText(f"{minimum_value:.2f}")
             item = self.tableWidget_RTT.item(row, 2)
-            item.setText(f"{maximum:.2f}")
+            item.setText(f"{maximum_value:.2f}")
             item = self.tableWidget_RTT.item(row, 3)
-            item.setText(f"{1000 * median(rtt):.2f}")
+            item.setText(f"{median_value:.2f}")
+            item = self.tableWidget_RTT.item(row, 4)
+            item.setText(f"{average_value:.2f}")
 
             # Update the line chart.
             if len(rtt) >= 3:
                 chart = LineChart()
+                chart.set_line_color(QColor(50, 50, 50))
+                chart.set_line_width(1)
                 chart.set_points(list(enumerate(rtt)))
-                chart.set_line_width(0.1)
-                chart.set_line_color(QColor(100, 100, 100))  # Dark gray
-                chart.set_background_color(Qt.white)
-                self.tableWidget_RTT.setCellWidget(row, 4, chart)
+                self.tableWidget_RTT.setCellWidget(row, 5, chart)
