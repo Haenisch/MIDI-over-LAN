@@ -23,6 +23,7 @@
 import logging
 import multiprocessing
 import time
+from collections import deque
 from functools import cache
 from socket import gethostbyaddr, gethostname
 from statistics import median
@@ -30,7 +31,7 @@ from typing import List, Tuple
 
 import mido
 from PySide6.QtCore import Qt, QTimerEvent
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import QHeaderView, QLabel, QMainWindow, QMessageBox, QTableWidgetItem
 
 from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
@@ -38,6 +39,7 @@ from ui_main_window import Ui_MainWindow
 from settings_dialog import SettingsDialog
 from debug_messages_dialog import DebugMessagesDialog, LoggingHandler
 from version import VERSION
+from line_chart import LineChart
 
 
 logger=logging.getLogger('midi_over_lan')  # pylint: disable=invalid-name
@@ -349,11 +351,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.send_input_ports_to_worker_process()
 
 
-    def update_round_trip_times(self, round_trip_times: List[Tuple[str, float]]):
+    def update_round_trip_times(self, round_trip_times: dict[str, deque[float]]):
         """Update the round trip times in the table widget."""
+
         logger.debug('Update round trip times.')
+
         for ip_address, rtt in round_trip_times.items():
             hostname = get_hostname(ip_address)
+
             # Check if the hostname is already in the table widget.
             found = False
             for row in range(self.tableWidget_RTT.rowCount()):
@@ -361,6 +366,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if item is not None and item.text() == hostname:
                     found = True
                     break
+
             if not found:
                 # Add a new row to the table widget.
                 self.tableWidget_RTT.setRowCount(self.tableWidget_RTT.rowCount() + 1)
@@ -369,10 +375,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.tableWidget_RTT.setItem(row, 1, QTableWidgetItem(""))
                 self.tableWidget_RTT.setItem(row, 2, QTableWidgetItem(""))
                 self.tableWidget_RTT.setItem(row, 3, QTableWidgetItem(""))
+                self.tableWidget_RTT.setItem(row, 4, QTableWidgetItem("Collecting data..."))
+
             # Update the existing row.
+            minimum = min(rtt) * 1000
+            maximum = max(rtt) * 1000
             item = self.tableWidget_RTT.item(row, 1)
-            item.setText(f"{1000 * min(rtt):.2f}")
+            item.setText(f"{minimum:.2f}")
             item = self.tableWidget_RTT.item(row, 2)
-            item.setText(f"{1000 * max(rtt):.2f}")
+            item.setText(f"{maximum:.2f}")
             item = self.tableWidget_RTT.item(row, 3)
             item.setText(f"{1000 * median(rtt):.2f}")
+
+            # Update the line chart.
+            if len(rtt) >= 3:
+                chart = LineChart()
+                chart.set_points(list(enumerate(rtt)))
+                chart.set_line_width(0.1)
+                chart.set_line_color(QColor(100, 100, 100))  # Dark gray
+                chart.set_background_color(Qt.white)
+                self.tableWidget_RTT.setCellWidget(row, 4, chart)
