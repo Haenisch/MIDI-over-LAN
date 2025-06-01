@@ -16,11 +16,15 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QGridLayout,
-    QGroupBox, QHBoxLayout, QHeaderView, QLabel,
-    QMainWindow, QMenu, QMenuBar, QPushButton,
-    QSizePolicy, QSpacerItem, QStatusBar, QTabWidget,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QFrame,
+    QGridLayout, QGroupBox, QHBoxLayout, QHeaderView,
+    QLabel, QMainWindow, QMenu, QMenuBar,
+    QPushButton, QSizePolicy, QSpacerItem, QStatusBar,
+    QTabWidget, QTableWidget, QTableWidgetItem, QVBoxLayout,
+    QWidget)
+
+from rotated_label import RotatedLabel
+from routing_matrix import RoutingMatrix
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -208,6 +212,107 @@ class Ui_MainWindow(object):
         self.tabWidget.addTab(self.tab_OutgoingTraffic, "")
         self.tab_IncomingTraffic = QWidget()
         self.tab_IncomingTraffic.setObjectName(u"tab_IncomingTraffic")
+        self.verticalLayout_2 = QVBoxLayout(self.tab_IncomingTraffic)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.groupBox_RoutingMatrix = QGroupBox(self.tab_IncomingTraffic)
+        self.groupBox_RoutingMatrix.setObjectName(u"groupBox_RoutingMatrix")
+        self.verticalLayout_5 = QVBoxLayout(self.groupBox_RoutingMatrix)
+        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
+        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3.setObjectName(u"gridLayout_3")
+        self.frame_HorizontalHeader = QFrame(self.groupBox_RoutingMatrix)
+        self.frame_HorizontalHeader.setObjectName(u"frame_HorizontalHeader")
+        self.frame_HorizontalHeader.setMaximumSize(QSize(16777215, 36))
+        self.frame_HorizontalHeader.setStyleSheet(u"background-color: rgba(240, 240, 240, 128);")
+        self.frame_HorizontalHeader.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_HorizontalHeader.setFrameShadow(QFrame.Shadow.Plain)
+        self.frame_HorizontalHeader.setLineWidth(0)
+        self.horizontalLayout_4 = QHBoxLayout(self.frame_HorizontalHeader)
+        self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
+        self.horizontalSpacer_4 = QSpacerItem(218, 13, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_4.addItem(self.horizontalSpacer_4)
+
+        self.label_RoutingMatrix_NetworkDevices = QLabel(self.frame_HorizontalHeader)
+        self.label_RoutingMatrix_NetworkDevices.setObjectName(u"label_RoutingMatrix_NetworkDevices")
+        self.label_RoutingMatrix_NetworkDevices.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.horizontalLayout_4.addWidget(self.label_RoutingMatrix_NetworkDevices)
+
+        self.horizontalSpacer_5 = QSpacerItem(217, 13, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_4.addItem(self.horizontalSpacer_5)
+
+
+        self.gridLayout_3.addWidget(self.frame_HorizontalHeader, 0, 1, 1, 1)
+
+        self.frame_VerticalHeader = QFrame(self.groupBox_RoutingMatrix)
+        self.frame_VerticalHeader.setObjectName(u"frame_VerticalHeader")
+        self.frame_VerticalHeader.setMaximumSize(QSize(36, 16777215))
+        self.frame_VerticalHeader.setStyleSheet(u"background-color: rgba(240, 240, 240, 128);")
+        self.frame_VerticalHeader.setFrameShape(QFrame.Shape.StyledPanel)
+        self.frame_VerticalHeader.setFrameShadow(QFrame.Shadow.Plain)
+        self.frame_VerticalHeader.setLineWidth(0)
+        self.verticalLayout = QVBoxLayout(self.frame_VerticalHeader)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer)
+
+        self.label_RoutingMatrix_LocalMidiDevices = RotatedLabel(self.frame_VerticalHeader)
+        self.label_RoutingMatrix_LocalMidiDevices.setObjectName(u"label_RoutingMatrix_LocalMidiDevices")
+        self.label_RoutingMatrix_LocalMidiDevices.setMinimumSize(QSize(150, 20))
+        self.label_RoutingMatrix_LocalMidiDevices.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.verticalLayout.addWidget(self.label_RoutingMatrix_LocalMidiDevices)
+
+        self.verticalSpacer_3 = QSpacerItem(13, 116, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+
+        self.verticalLayout.addItem(self.verticalSpacer_3)
+
+
+        self.gridLayout_3.addWidget(self.frame_VerticalHeader, 1, 0, 1, 1)
+
+        self.tableWidget_RoutingMatrix = RoutingMatrix(self.groupBox_RoutingMatrix)
+        self.tableWidget_RoutingMatrix.setObjectName(u"tableWidget_RoutingMatrix")
+
+        self.gridLayout_3.addWidget(self.tableWidget_RoutingMatrix, 1, 1, 1, 1)
+
+
+        self.verticalLayout_5.addLayout(self.gridLayout_3)
+
+        self.horizontalLayout_3 = QHBoxLayout()
+        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
+        self.pushButton_RoutingMatrix_SelectAll = QPushButton(self.groupBox_RoutingMatrix)
+        self.pushButton_RoutingMatrix_SelectAll.setObjectName(u"pushButton_RoutingMatrix_SelectAll")
+
+        self.horizontalLayout_3.addWidget(self.pushButton_RoutingMatrix_SelectAll)
+
+        self.pushButton_RoutingMatrix_UnselectAll = QPushButton(self.groupBox_RoutingMatrix)
+        self.pushButton_RoutingMatrix_UnselectAll.setObjectName(u"pushButton_RoutingMatrix_UnselectAll")
+
+        self.horizontalLayout_3.addWidget(self.pushButton_RoutingMatrix_UnselectAll)
+
+        self.pushButton_RoutingMatrix_Refresh = QPushButton(self.groupBox_RoutingMatrix)
+        self.pushButton_RoutingMatrix_Refresh.setObjectName(u"pushButton_RoutingMatrix_Refresh")
+
+        self.horizontalLayout_3.addWidget(self.pushButton_RoutingMatrix_Refresh)
+
+        self.pushButton_RoutingMatrix_Clear = QPushButton(self.groupBox_RoutingMatrix)
+        self.pushButton_RoutingMatrix_Clear.setObjectName(u"pushButton_RoutingMatrix_Clear")
+
+        self.horizontalLayout_3.addWidget(self.pushButton_RoutingMatrix_Clear)
+
+        self.horizontalSpacer_3 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
+
+
+        self.verticalLayout_5.addLayout(self.horizontalLayout_3)
+
+
+        self.verticalLayout_2.addWidget(self.groupBox_RoutingMatrix)
+
         self.tabWidget.addTab(self.tab_IncomingTraffic, "")
         self.tab_Statistics = QWidget()
         self.tab_Statistics.setObjectName(u"tab_Statistics")
@@ -274,6 +379,19 @@ class Ui_MainWindow(object):
 #if QT_CONFIG(shortcut)
         self.label_OutgoingTraffic_IgnoreMidiClock.setBuddy(self.checkBox_OutgoingTraffic_IgnoreMidiClock)
 #endif // QT_CONFIG(shortcut)
+        QWidget.setTabOrder(self.tableWidget_LocalInputPorts, self.pushButton_LocalInputPorts_SelectAll)
+        QWidget.setTabOrder(self.pushButton_LocalInputPorts_SelectAll, self.pushButton_LocalInputPorts_UnselectAll)
+        QWidget.setTabOrder(self.pushButton_LocalInputPorts_UnselectAll, self.pushButton_LocalInputPorts_Refresh)
+        QWidget.setTabOrder(self.pushButton_LocalInputPorts_Refresh, self.checkBox_OutgoingTraffic_IgnoreMidiClock)
+        QWidget.setTabOrder(self.checkBox_OutgoingTraffic_IgnoreMidiClock, self.pushButton_OutgoingTraffic_Restart)
+        QWidget.setTabOrder(self.pushButton_OutgoingTraffic_Restart, self.pushButton_OutgoingTraffic_PauseResume)
+        QWidget.setTabOrder(self.pushButton_OutgoingTraffic_PauseResume, self.tabWidget)
+        QWidget.setTabOrder(self.tabWidget, self.tableWidget_RoutingMatrix)
+        QWidget.setTabOrder(self.tableWidget_RoutingMatrix, self.pushButton_RoutingMatrix_SelectAll)
+        QWidget.setTabOrder(self.pushButton_RoutingMatrix_SelectAll, self.pushButton_RoutingMatrix_UnselectAll)
+        QWidget.setTabOrder(self.pushButton_RoutingMatrix_UnselectAll, self.pushButton_RoutingMatrix_Refresh)
+        QWidget.setTabOrder(self.pushButton_RoutingMatrix_Refresh, self.pushButton_RoutingMatrix_Clear)
+        QWidget.setTabOrder(self.pushButton_RoutingMatrix_Clear, self.tableWidget_RTT)
 
         self.menubar.addAction(self.menu_File.menuAction())
         self.menubar.addAction(self.menu_Settings.menuAction())
@@ -308,7 +426,7 @@ class Ui_MainWindow(object):
         self.pushButton_LocalInputPorts_SelectAll.setText(QCoreApplication.translate("MainWindow", u"Select &All", None))
         self.pushButton_LocalInputPorts_UnselectAll.setText(QCoreApplication.translate("MainWindow", u"&Unselect All", None))
 #if QT_CONFIG(tooltip)
-        self.pushButton_LocalInputPorts_Refresh.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Refresh the list of output ports in case a new device is connected.</p></body></html>", None))
+        self.pushButton_LocalInputPorts_Refresh.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Refresh the list of input ports in case a new device is connected.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.pushButton_LocalInputPorts_Refresh.setText(QCoreApplication.translate("MainWindow", u"R&efresh", None))
         self.groupBox_Server_OutgoingTraffic.setTitle(QCoreApplication.translate("MainWindow", u"Server", None))
@@ -327,6 +445,19 @@ class Ui_MainWindow(object):
         self.pushButton_OutgoingTraffic_PauseResume.setText(QCoreApplication.translate("MainWindow", u"&Pause/Resume", None))
         self.label_OutgoingTraffic_ServerStatus.setText("")
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_OutgoingTraffic), QCoreApplication.translate("MainWindow", u"&Outgoing Traffic", None))
+        self.groupBox_RoutingMatrix.setTitle(QCoreApplication.translate("MainWindow", u"Routing Matrix", None))
+        self.label_RoutingMatrix_NetworkDevices.setText(QCoreApplication.translate("MainWindow", u"Network Devices", None))
+        self.label_RoutingMatrix_LocalMidiDevices.setText(QCoreApplication.translate("MainWindow", u"Local MIDI Devices", None))
+        self.pushButton_RoutingMatrix_SelectAll.setText(QCoreApplication.translate("MainWindow", u"Select &All", None))
+        self.pushButton_RoutingMatrix_UnselectAll.setText(QCoreApplication.translate("MainWindow", u"&Unselect All", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_RoutingMatrix_Refresh.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Refresh the list of local output ports in case a new device is connected.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_RoutingMatrix_Refresh.setText(QCoreApplication.translate("MainWindow", u"&Refresh", None))
+#if QT_CONFIG(tooltip)
+        self.pushButton_RoutingMatrix_Clear.setToolTip(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>Remove all entries. The routing matrix will remain empty until some network devices are detected.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
+        self.pushButton_RoutingMatrix_Clear.setText(QCoreApplication.translate("MainWindow", u"&Clear", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_IncomingTraffic), QCoreApplication.translate("MainWindow", u"&Incoming Traffic", None))
         self.groupBox_RTT.setTitle(QCoreApplication.translate("MainWindow", u"Round-Trip Times (in milliseconds)", None))
         ___qtablewidgetitem2 = self.tableWidget_RTT.horizontalHeaderItem(0)

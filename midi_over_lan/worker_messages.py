@@ -107,19 +107,27 @@ class Information(Enum):
                  data:  tuple (IP address of remote host, packet id, timestamp
                         as provided by perf_counter)
 
+        REMOTE_MIDI_DEVICES:
+            objective:  Provide information about the remote MIDI devices
+                        discovered by the receiving worker process.
+                 data:  dict[str, set[str]] where the key is the IP address or
+                        hostname of the remote host and the values are the
+                        network names of the remote MIDI devices.
+
         ROUND_TRIP_TIMES:
             objective:  Provide information about the round trip times between
                         the local host and the various remote hosts. The round
                         trip time is the time between sending a hello packet and
                         receiving the corresponding hello reply packet.
-                 data:  dict[str, deque[float]] where the key is the IP address of the
-                        remote host and the value is a deque of round trip times
-                        (in seconds) for the last 100 hello packets sent to the
-                        remote host.
+                 data:  dict[str, deque[float]] where the key is the IP address
+                        of the remote host and the value is a deque of round
+                        trip times (in seconds) for the last 100 hello packets
+                        sent to the remote host.
 """
 
     HELLO_PACKET_INFO = auto()
     RECEIVED_HELLO_PACKET = auto()
+    REMOTE_MIDI_DEVICES = auto()
     ROUND_TRIP_TIMES = auto()
 
 

@@ -157,7 +157,7 @@ class MidiSender(multiprocessing.Process):
         """Send every 10 seconds a hello packet to the multicast group."""
         now = time.time()
         timestamp = self.timestamp_of_last_hello
-        if (timestamp is None) or (now - timestamp >= 10):  # 10 seconds
+        if (timestamp is None) or (now - timestamp >= 1):  # 10 seconds
             logger.debug("Sending 'Hello' packet.")
             self.timestamp_of_last_hello = now
             # A 'Hello' packet may include a list of local MIDI devices whose

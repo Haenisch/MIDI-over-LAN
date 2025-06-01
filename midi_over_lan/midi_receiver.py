@@ -71,12 +71,12 @@ class MidiReceiver(multiprocessing.Process):
         self.running = True
         self.paused = False
         self.save_cpu_time = True
-        self.remote_midi_devices: List[Tuple[str, str]] = []  # List of tuples (device_name, remote ip address)
-        self.midi_output_ports: List[bool, str] = []  # List of tuples (available, port_name)
+        self.midi_output_ports: List[Tuple[bool, str]] = []  # List of tuples (available, port_name)
         self.received_midi_messages: deque[Tuple[MidiMessagePacket, str]] = deque()  # (packet, remote ip address)
         self.received_hello_packets: deque[Tuple[HelloPacket, str]] = deque()  # (packet, remote ip address)
         self.received_hello_reply_packets: deque[Tuple[HelloReplyPacket, str]] = deque()  # (packet, remote ip address [sender of the hello reply packet])
         self.sent_hello_packets_timestamps: dict[int, float] = {}  # entries of the form {packet_id: perf_counter timestamp}
+        self.remote_midi_devices: dict[str, set[str]] = {}  # key is remote ip address or hostname; values are the user-defined network names of the remote MIDI devices
         self.round_trip_times: dict[str, deque[float]] = {}  # round trip times for the various ip addresses; limit to 100 entries
 
     def run(self):
@@ -166,6 +166,7 @@ class MidiReceiver(multiprocessing.Process):
 
     def get_midi_output_ports(self):
         """Determine MIDI output ports on the host computer."""
+        self.midi_output_ports.clear()
         for port in mido.get_output_names():
             available = not is_output_port_in_use(port)
             self.midi_output_ports.append((available, port))
@@ -178,10 +179,21 @@ class MidiReceiver(multiprocessing.Process):
             packet, remote_ip = self.received_hello_packets.popleft()
             if packet.hostname == 'unknown':
                 packet.hostname = remote_ip
+
             # Inform the sending process about the received hello packet
             self.sender_queue.put(InfoMessage(Information.RECEIVED_HELLO_PACKET, (remote_ip, packet.id, time.perf_counter())))
             logger.debug("Received hello packet. Informing sender process.")
-            # TODO: Inform main process about available network MIDI devices
+
+            # Inform main process about available network MIDI devices
+            if not packet.device_names:
+                continue
+            if packet.hostname not in self.remote_midi_devices:
+                self.remote_midi_devices[packet.hostname] = set()
+            for device_name in packet.device_names:
+                if device_name not in self.remote_midi_devices[packet.hostname]:
+                    logger.debug(f"Adding remote MIDI device '{device_name}' from {packet.hostname}.")
+                    self.remote_midi_devices[packet.hostname].add(device_name)
+                    self.ui_queue.put(InfoMessage(Information.REMOTE_MIDI_DEVICES, self.remote_midi_devices))
 
         # Delete hello packets information that is older than 5 minutes
         self.sent_hello_packets_timestamps = {packet_id: timestamp for packet_id, timestamp in self.sent_hello_packets_timestamps.items() if time.perf_counter() - timestamp < 300}
@@ -206,12 +218,25 @@ class MidiReceiver(multiprocessing.Process):
             round_trip_time = receive_timestamp - send_off_timestamp
             logger.info(f"Received 'Hello Reply' packet from {remote_ip}: {packet}")
             logger.info(f"Round trip time: {round_trip_time * 1000:.2f} milliseconds")
+
             # Store the round trip time for the remote ip address
             if remote_ip not in self.round_trip_times:
                 self.round_trip_times[remote_ip] = deque(maxlen=100)
             self.round_trip_times[remote_ip].append(round_trip_time)
+
             # Inform the main process about the round trip times
             self.ui_queue.put(InfoMessage(Information.ROUND_TRIP_TIMES, self.round_trip_times))
+
+            # Inform main process about available network MIDI devices
+            if not packet.device_names:
+                continue
+            if packet.hostname not in self.remote_midi_devices:
+                self.remote_midi_devices[packet.hostname] = set()
+            for device_name in packet.device_names:
+                if device_name not in self.remote_midi_devices[packet.hostname]:
+                    logger.debug(f"Adding remote MIDI device '{device_name}' from {packet.hostname}.")
+                    self.remote_midi_devices[packet.hostname].add(device_name)
+                    self.ui_queue.put(InfoMessage(Information.REMOTE_MIDI_DEVICES, self.remote_midi_devices))
 
 
     def process_other_packets(self):
