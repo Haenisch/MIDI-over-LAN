@@ -130,10 +130,16 @@ class MidiSender(multiprocessing.Process):
                                     self.set_ignore_midi_clock(item)
                                 case Command.SET_SAVE_CPU_TIME:
                                     self.set_save_cpu_time(item)
+                                case _:
+                                    logger.warning(f"Unexpected command '{item.command}'.")
+                                    continue
                         elif isinstance(item, InfoMessage):
                             match item.info:
                                 case Information.RECEIVED_HELLO_PACKET:
                                     self.send_hello_reply_packet(item)
+                                case _:
+                                    logger.warning(f"Unexpected information message '{item.info}'.")
+                                    continue
                         else:
                             logger.warning(f"Invalid command '{item}'.")
                             continue
@@ -197,7 +203,7 @@ class MidiSender(multiprocessing.Process):
                     continue
                 logger.debug(f"Sending MIDI message ({message}).")
                 packet = MidiMessagePacket(device_name=device_name, midi_data=bytes(message.bytes()))
-                logger.debug(packet)
+                logger.debug(str(packet).replace("\n", " "))  # Print the packet in a single line
                 try:
                     self.sock.sendto(packet.to_bytes(), (MULTICAST_GROUP_ADDRESS, MULTICAST_PORT_NUMBER))
                 except OSError as error:

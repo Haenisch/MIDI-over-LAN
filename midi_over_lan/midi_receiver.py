@@ -44,16 +44,6 @@ from midi_over_lan.worker_messages import Command, CommandMessage, Information, 
 logger = None  # must be setup by calling init_logger() in the run() method
 
 
-def is_output_port_in_use(port_name: str) -> bool:
-    """Check if a MIDI output port is already open."""
-    try:
-        with mido.open_output(port_name):  # pylint: disable=no-member
-            return False  # if the port can be opened, it is not open
-    except IOError:
-        # in case of an IOError, the port is probably already open
-        return True
-
-
 class MidiReceiver(multiprocessing.Process):
     """Worker process for handling incoming MIDI over LAN data."""
 
@@ -71,13 +61,14 @@ class MidiReceiver(multiprocessing.Process):
         self.running = True
         self.paused = False
         self.save_cpu_time = True
-        self.midi_output_ports: List[Tuple[bool, str]] = []  # List of tuples (available, port_name)
+        self.midi_output_ports: dict[str, mido.ports.BaseOutput] = {}  # key is the output port name, value is the mido output port object
         self.received_midi_messages: deque[Tuple[MidiMessagePacket, str]] = deque()  # (packet, remote ip address)
         self.received_hello_packets: deque[Tuple[HelloPacket, str]] = deque()  # (packet, remote ip address)
         self.received_hello_reply_packets: deque[Tuple[HelloReplyPacket, str]] = deque()  # (packet, remote ip address [sender of the hello reply packet])
         self.sent_hello_packets_timestamps: dict[int, float] = {}  # entries of the form {packet_id: perf_counter timestamp}
         self.remote_midi_devices: dict[str, set[str]] = {}  # key is remote ip address or hostname; values are the user-defined network names of the remote MIDI devices
         self.round_trip_times: dict[str, deque[float]] = {}  # round trip times for the various ip addresses; limit to 100 entries
+        self.routing_connections: dict[str, set[str]] = {}  # key is the network name of the MIDI device; values are the local output port names to which the MIDI data should be sent
 
     def run(self):
         """Process incoming MIDI over LAN data."""
@@ -111,17 +102,26 @@ class MidiReceiver(multiprocessing.Process):
                                     self.running = False
                                 case Command.SET_MIDI_OUTPUT_PORTS:
                                     logger.debug(f"Setting MIDI input ports '{item.data}'.   *** NOT YET IMPLEMENTED ***")
-                                    # self.set_midi_output_ports(item)  # TODO
+                                    # self.set_midi_output_ports(item)  # TODO: Maybe remove this command?
                                 case Command.SET_NETWORK_INTERFACE:
                                     logger.debug(f"Setting network interface '{item.data}'.")
                                     self.set_network_interface(item)
                                 case Command.SET_SAVE_CPU_TIME:
                                     self.set_save_cpu_time(item)
+                                case _:
+                                    logger.warning(f"Unexpected command '{item.command}'.")
+                                    continue
                         elif isinstance(item, InfoMessage):
                             match item.info:
                                 case Information.HELLO_PACKET_INFO:
                                     logger.debug("Received internal 'Hello Packet' information.")
                                     self.store_internal_hello_packet_info(item)
+                                case Information.ROUTING_INFORMATION:
+                                    logger.debug(f"Received routing information '{item.data}'.")
+                                    self.routing_connections = item.data
+                                case _:
+                                    logger.warning(f"Unexpected information message '{item.info}'.")
+                                    continue
                         else:
                             logger.warning(f"Invalid command '{item}'.")
                             continue
@@ -166,11 +166,25 @@ class MidiReceiver(multiprocessing.Process):
 
     def get_midi_output_ports(self):
         """Determine MIDI output ports on the host computer."""
+
+        # Close all existing MIDI output ports
+        for port in self.midi_output_ports.values():
+            try:
+                port.close()
+                logger.debug(f"Closed MIDI output port '{port.name}'.")
+            except Exception as error:
+                logger.error(f"Failed to close MIDI output port '{port.name}': {error}")
         self.midi_output_ports.clear()
-        for port in mido.get_output_names():
-            available = not is_output_port_in_use(port)
-            self.midi_output_ports.append((available, port))
-            logger.debug(f"MIDI output port '{port}' is {'available' if available else 'in use'}.")
+
+        # Open all available MIDI output ports
+        logger.debug("Determining available MIDI output ports.")
+        for port_name in mido.get_output_names():
+            try:
+                outport = mido.open_output(port_name)  # pylint: disable=no-member
+            except Exception:  # pylint: disable=broad-except
+                logger.error(f"Failed to open MIDI output port '{port_name}'. It is probably already in use.")
+                continue
+            self.midi_output_ports[port_name] = outport
 
 
     def process_hello_packets(self):
@@ -243,8 +257,15 @@ class MidiReceiver(multiprocessing.Process):
         """Process incoming MIDI message packets."""
         while self.received_midi_messages:
             packet, addr = self.received_midi_messages.popleft()
-            midi_msg = mido.parse(packet.midi_data)
-            logger.debug(f"Received MIDI message from {addr}: {midi_msg}")
+            midi_message = mido.parse(packet.midi_data)
+            logger.debug(f"Received MIDI message(s) from {addr}, {packet.device_name}: {midi_message}")
+            if output_port_names := self.routing_connections.get(packet.device_name):  # get output port names associated with the current MIDI network device
+                for output_port_name in output_port_names:
+                    if output_port := self.midi_output_ports.get(output_port_name):
+                        try:
+                            output_port.send(midi_message)
+                        except Exception as error:
+                            logger.error(f"Failed to send MIDI message to output port '{output_port_name}': {error}")
 
 
     def set_network_interface(self, item: CommandMessage):

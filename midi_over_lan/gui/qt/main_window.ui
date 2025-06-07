@@ -458,7 +458,7 @@ border-radius: 10px;</string>
                  <widget class="RotatedLabel" name="label_RoutingMatrix_LocalMidiDevices">
                   <property name="minimumSize">
                    <size>
-                    <width>150</width>
+                    <width>250</width>
                     <height>20</height>
                    </size>
                   </property>
@@ -477,8 +477,8 @@ border-radius: 10px;</string>
                   </property>
                   <property name="sizeHint" stdset="0">
                    <size>
-                    <width>13</width>
-                    <height>116</height>
+                    <width>20</width>
+                    <height>40</height>
                    </size>
                   </property>
                  </spacer>

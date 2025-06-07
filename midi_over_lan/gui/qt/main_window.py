@@ -111,12 +111,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableWidget_LocalInputPorts.itemChanged.connect(self.update_network_names)
 
         # Set up routing matrix.
-        # self.routing_matrix = RoutingMatrix()
-        # self.routing_matrix.connections_changed.connect(lambda outputs, inputs: logger.debug("Connections changed:\n  Outputs to Inputs: %s\n  Inputs to Outputs: %s", outputs, inputs))
-        # self.frame_RoutingMatrix.setLayout(QVBoxLayout())
-        # self.frame_RoutingMatrix.layout().addWidget(self.routing_matrix)
-        # self.routing_matrix = RoutingMatrix()
-        self.tableWidget_RoutingMatrix.connections_changed.connect(lambda outputs, inputs: logger.debug("Connections changed:\n  Outputs to Inputs: %s\n  Inputs to Outputs: %s", outputs, inputs))
+        # self.tableWidget_RoutingMatrix.connections_changed.connect(lambda outputs, inputs: logger.debug("Connections changed:\n  Outputs to Inputs: %s\n  Inputs to Outputs: %s", outputs, inputs))
+        self.tableWidget_RoutingMatrix.connections_changed.connect(self.routing_matrix_connections_changed)
 
         # Connect the GUI elements to the functions.
         self.pushButton_LocalInputPorts_SelectAll.clicked.connect(self.select_all_input_ports)
@@ -289,16 +285,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def routing_matrix_connections_changed(self, outputs: dict[str, set[str]], inputs: dict[str, set[str]]):
         """Handle the connections changed signal from the routing matrix."""
-        logger.debug('Routing matrix connections changed.')
-        # Update the routing connections.
-        self.routing_connections = {output: set() for output in outputs}
-        for input_port, output_ports in self.tableWidget_RoutingMatrix.get_connections().items():
-            for output_port in output_ports:
-                if output_port in self.routing_connections:
-                    self.routing_connections[output_port].add(input_port)
-        # Send the updated routing connections to the sender process.
-        self.sender_queue.put(CommandMessage(Command.SET_MIDI_OUTPUT_PORTS, self.routing_connections))
-        logger.debug(f"Updated routing connections: {self.routing_connections}")
+        logger.debug(f'Routing matrix connections changed: {outputs}')
+        self.routing_connections = outputs  # Update the routing connections.
+        self.receiver_queue.put(InfoMessage(Information.ROUTING_INFORMATION, self.routing_connections))
 
 
     def show_debug_messages_dialog(self):

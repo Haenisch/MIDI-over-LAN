@@ -261,12 +261,12 @@ class Ui_MainWindow(object):
 
         self.label_RoutingMatrix_LocalMidiDevices = RotatedLabel(self.frame_VerticalHeader)
         self.label_RoutingMatrix_LocalMidiDevices.setObjectName(u"label_RoutingMatrix_LocalMidiDevices")
-        self.label_RoutingMatrix_LocalMidiDevices.setMinimumSize(QSize(150, 20))
+        self.label_RoutingMatrix_LocalMidiDevices.setMinimumSize(QSize(250, 20))
         self.label_RoutingMatrix_LocalMidiDevices.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout.addWidget(self.label_RoutingMatrix_LocalMidiDevices)
 
-        self.verticalSpacer_3 = QSpacerItem(13, 116, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
+        self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer_3)
 

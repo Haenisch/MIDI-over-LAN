@@ -8,6 +8,7 @@
 from abc import ABC
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Any
 
 
 class Command(Enum):
@@ -18,7 +19,8 @@ class Command(Enum):
         RESTART:
             objective:  Restart the worker process.
                  data:  None
-        PAUSE
+
+        PAUSE:
             objective:  Pause the worker process.
                  data:  None
 
@@ -123,27 +125,61 @@ class Information(Enum):
                         of the remote host and the value is a deque of round
                         trip times (in seconds) for the last 100 hello packets
                         sent to the remote host.
+
+
+        ROUTING_INFORMATION:
+            objective:  Provide information about which remote MIDI device shall
+                        be mapped to which local MIDI output port.
+                 data:  dict[str, set[str]] where the key is the network name
+                        of the remote MIDI device and the value is a set of
+                        local MIDI output port names to which the remote MIDI
+                        device is bound.
 """
 
     HELLO_PACKET_INFO = auto()
     RECEIVED_HELLO_PACKET = auto()
     REMOTE_MIDI_DEVICES = auto()
     ROUND_TRIP_TIMES = auto()
-
-
-class WorkerMessage(ABC):
-    """Base class for worker messages."""
+    ROUTING_INFORMATION = auto()
 
 
 @dataclass
-class CommandMessage(WorkerMessage):
-    """Command message."""
+class CommandMessage:
+    """Command message.
+    
+    Attributes:
+        command: The command to be executed.
+        data: Optional data associated with the command.
+    
+    Example:
+        ```python
+        CommandMessage(Command.SET_NETWORK_INTERFACE, data="192.168.0.50")
+        ```
+    
+    See the `Command` enumeration for available commands and their expected
+    data types.
+    """
     command: Command
-    data: any = None
+    data: Any = None
 
 
 @dataclass
-class InfoMessage(WorkerMessage):
-    """Info message."""
+class InfoMessage:
+    """Info message.
+    
+    Attributes:
+        info: The information to be conveyed.
+        data: Optional data associated with the information.
+
+    Example:
+        ```python
+        packet_id = 12
+        timestamp = time.perf_counter()
+        InfoMessage(Information.HELLO_PACKET_INFO, data=(packet_id, timestamp))
+        ```
+
+    See the `Information` enumeration for available information types and their
+    expected data types.
+    """
     info: Information
-    data: any = None
+    data: Any = None
