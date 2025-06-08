@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'settings_dialog.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.8.2
+## Created by: Qt User Interface Compiler version 6.9.0
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -145,14 +145,20 @@ class Ui_Settings(object):
         self.lineEdit_NetworkInterface.setToolTip(QCoreApplication.translate("Settings", u"<html><head/><body><p>IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_NetworkInterface.setText(QCoreApplication.translate("Settings", u"default", None))
+#if QT_CONFIG(tooltip)
+        self.label_MulticastGroupAddress.setToolTip(QCoreApplication.translate("Settings", u"<html><head/><body><p>Multicast group address of the MIDI over LAN protocol. Cannot be changed.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.label_MulticastGroupAddress.setText(QCoreApplication.translate("Settings", u"Multicast Group Address:", None))
 #if QT_CONFIG(tooltip)
-        self.lineEdit_MulticastGroupAddress.setToolTip(QCoreApplication.translate("Settings", u"<html><head/><body><p>IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.</p></body></html>", None))
+        self.lineEdit_MulticastGroupAddress.setToolTip(QCoreApplication.translate("Settings", u"<html><head/><body><p>Multicast group address of the MIDI over LAN protocol. Cannot be changed.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_MulticastGroupAddress.setText(QCoreApplication.translate("Settings", u"239.0.3.250", None))
+#if QT_CONFIG(tooltip)
+        self.label_MulticastPortNumber.setToolTip(QCoreApplication.translate("Settings", u"<html><head/><body><p>Multicast port number of the MIDI over LAN protocol. Cannot be changed.</p></body></html>", None))
+#endif // QT_CONFIG(tooltip)
         self.label_MulticastPortNumber.setText(QCoreApplication.translate("Settings", u"Multicast Port Number:", None))
 #if QT_CONFIG(tooltip)
-        self.lineEdit_MulticastPortNumber.setToolTip(QCoreApplication.translate("Settings", u"<html><head/><body><p>IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.</p></body></html>", None))
+        self.lineEdit_MulticastPortNumber.setToolTip(QCoreApplication.translate("Settings", u"<html><head/><body><p>Multicast port number of the MIDI over LAN protocol. Cannot be changed.</p></body></html>", None))
 #endif // QT_CONFIG(tooltip)
         self.lineEdit_MulticastPortNumber.setText(QCoreApplication.translate("Settings", u"56129", None))
 #if QT_CONFIG(tooltip)

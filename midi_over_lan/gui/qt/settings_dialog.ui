@@ -73,6 +73,9 @@
            <height>0</height>
           </size>
          </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Multicast group address of the MIDI over LAN protocol. Cannot be changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
          <property name="text">
           <string>Multicast Group Address:</string>
          </property>
@@ -96,7 +99,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Multicast group address of the MIDI over LAN protocol. Cannot be changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>239.0.3.250</string>
@@ -110,6 +113,9 @@
            <width>0</width>
            <height>0</height>
           </size>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Multicast port number of the MIDI over LAN protocol. Cannot be changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>Multicast Port Number:</string>
@@ -134,7 +140,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;IPv4 address of the network interface to be used. If not specified, the default interface is used. Alternatively, you can specify a hostname such as 'computer' or 'computer.domain.name', or an alias like 'localhost'.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Multicast port number of the MIDI over LAN protocol. Cannot be changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string>56129</string>

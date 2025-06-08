@@ -15,14 +15,14 @@ from math import hypot, degrees, radians, acos, sin, sqrt
 
 from PySide6.QtCore import Qt, QRect, QRectF, Signal
 from PySide6.QtGui import QColor, QPainter, QTransform
-from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QHeaderView, QSizePolicy, QTableWidget, QWidget
+from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QHeaderView, QLabel, QSizePolicy, QStackedWidget, QTableWidget, QWidget
 
 
 logger = logging.getLogger("midi_over_lan.gui")
 
 
 class AngledHeader(QHeaderView):
-    """This class implements a custom header for the routing matrix. The header
+    """This class implements a custom header for the routing table. The header
     is angled by 45 degrees to make the column labels more readable. The row
     labels are not angled, but they are bold and centered. The header is
     implemented using a QHeaderView, which is a part of the Qt framework. The
@@ -151,11 +151,11 @@ class AngledHeader(QHeaderView):
             qp.restore()
 
 
-class RoutingMatrix(QTableWidget):
-    """The routing matrix is a table that enables the end-user to select
-    which output ports are connected to which input ports.
+class RoutingTable(QTableWidget):
+    """A routing table that enables the end-user to select which output port is
+    connected to which input port.
 
-    This routing matrix is implemented using a QTableWidget, where each row
+    This routing table is implemented using a QTableWidget, where each row
     represents an input port and each column represents an output port. The
     end-user can select multiple cells in the grid to indicate connections
     between outputs and inputs. Users of this class must provide the inputs and
@@ -184,7 +184,7 @@ class RoutingMatrix(QTableWidget):
     yielding a set of connected ports. If a port has no connections, the set
     will be empty.
 
-    The routing matrix is automatically updated when the list of input ports or
+    The routing table is automatically updated when the list of input ports or
     output ports is changed. The class maintains the current connections,
     ensuring that connections are preserved even when the input or output port
     lists are modified.
@@ -195,8 +195,8 @@ class RoutingMatrix(QTableWidget):
     Available methods:
 
         - `clear()`: Remove input and output port names (for the internal bookkeeping see function description).
-        - `select_all()`: Select all checkboxes in the routing matrix.
-        - `unselect_all()`: Unselect all checkboxes in the routing matrix.
+        - `select_all()`: Select all checkboxes in the routing table.
+        - `unselect_all()`: Unselect all checkboxes in the routing table.
         - `set_input_ports(names: List[str])`: Set the names of the input ports.
         - `set_output_ports(names: List[str])`: Set the names of the output ports.
 
@@ -211,7 +211,7 @@ class RoutingMatrix(QTableWidget):
     def __init__(self, parent=None, output_port_names:list[str]|None=None, input_port_names:list[str]|None=None):
         """Initialize the RoutingMatrix class.
         Args:
-            parent: The parent widget for the routing matrix.
+            parent: The parent widget for the routing table.
             output_port_names: A list of names for the output ports.
             input_port_names: A list of names for the input ports.
         """
@@ -239,14 +239,14 @@ class RoutingMatrix(QTableWidget):
         If `keep_internal_bookkeeping` is True, the internal bookkeeping
         dictionary is not cleared, allowing the restoration of previously
         established connections. If False, the internal bookkeeping is cleared
-        and the routing matrix is reset to an empty state.
+        and the routing table is reset to an empty state.
 
         The `connections_changed` signal is emitted with the current state of
         the `outputs_to_inputs` and `inputs_to_outputs` dictionaries, which will
-        be empty after clearing the routing matrix.
+        be empty after clearing the routing table.
         """
 
-        logger.debug("Clearing the routing matrix")
+        logger.debug("Clearing the routing table")
 
         if keep_internal_bookkeeping:
             # Clear the output and input port names, but keep the bookkeeping
@@ -279,7 +279,7 @@ class RoutingMatrix(QTableWidget):
 
 
     def handle_checkbox_state_change(self, row, col, state):
-        """Handle the state change of a checkbox in the routing matrix.
+        """Handle the state change of a checkbox in the routing table.
         
         This method updates the connections based on the state of the checkbox
         at the specified row and column. It emits the `connections_changed`
@@ -316,8 +316,8 @@ class RoutingMatrix(QTableWidget):
 
 
     def rebuild_table(self):
-        """Build up the routing matrix (i.e., the table with the header labels and checkboxes)."""
-        logger.debug("Rebuilding routing matrix with %d input ports and %d output ports", len(self.input_port_names), len(self.output_port_names))
+        """Build up the routing table (i.e., the table with the header labels and checkboxes)."""
+        logger.debug("Rebuilding routing table with %d input ports and %d output ports", len(self.input_port_names), len(self.output_port_names))
 
         super().clear()
         num_rows = len(self.input_port_names)
@@ -375,7 +375,7 @@ class RoutingMatrix(QTableWidget):
 
 
     def select_all(self):
-        """Select all checkboxes in the routing matrix.
+        """Select all checkboxes in the routing table.
 
         The connections_changed signal is emitted with the current state of the
         outputs_to_inputs and inputs_to_outputs dictionaries, which will be
@@ -428,7 +428,7 @@ class RoutingMatrix(QTableWidget):
 
 
     def unselect_all(self):
-        """Unselect all checkboxes in the routing matrix.
+        """Unselect all checkboxes in the routing table.
 
         The connections_changed signal is emitted with the current state of the
         outputs_to_inputs and inputs_to_outputs dictionaries, which will be
@@ -446,6 +446,166 @@ class RoutingMatrix(QTableWidget):
         self.connections_changed.emit(self.outputs_to_inputs, self.inputs_to_outputs)
 
 
+class RoutingMatrix(QStackedWidget):
+    """The routing matrix is a table that enables the end-user to select which
+    output ports are connected to which input ports.
+
+    This widget is a simple wrapper around the `RoutingTable` class, providing
+    a convenient way to display and manage MIDI routing connections in a GUI.
+    The main difference from the `RoutingTable` is that it shows a message
+    when there are no input or output ports available, instead of displaying an
+    empty table. In addition, the class can be used as a toplevel widget as it
+    inherits from `QStackedWidget`.
+
+    Each row in the table represents an input port and each column represents an
+    output port. The end-user can select multiple cells in the grid to indicate
+    connections between outputs and inputs. The names of the input and output
+    ports are provided as lists of strings when initializing the `RoutingMatrix`
+    or by calling the `set_input_ports()` and `set_output_ports()` methods.
+
+    Whenever the end-user selects a cell, a `connections_changed()` signal is
+    emitted. Connections are stored in dictionaries, where the keys can either
+    be input ports or output ports, and the values are sets of the corresponding
+    connected ports. Two dictionaries (`dict[str, set[str]]`) are passed along
+    with the `connections_changed()` signal:
+
+        - `outputs_to_inputs`:  Keys are output ports, and values are sets of
+                                input ports connected to each specific output
+                                port (i.e., connections from output ports to
+                                input ports from the perspective of the output
+                                ports).
+
+        - `inputs_to_outputs`:  Keys are input ports, and values are sets of
+                                output ports connected to each specific input
+                                port (i.e., connections from output ports to
+                                input ports from the perspective of the input
+                                ports).
+
+    It is guaranteed that a port name is a valid key in both dictionaries,
+    yielding a set of connected ports. If a port has no connections, the set
+    will be empty.
+
+    The routing matrix is automatically updated when the list of input ports or
+    output ports is changed. The class maintains the current connections,
+    ensuring that connections are preserved even when the input or output port
+    lists are modified.
+
+    Public API:
+    ===========
+
+    Available methods:
+
+        - `clear()`: Remove input and output port names (for the internal bookkeeping see function description).
+        - `select_all()`: Select all checkboxes in the routing table.
+        - `unselect_all()`: Unselect all checkboxes in the routing table.
+        - `set_input_ports(names: List[str])`: Set the names of the input ports.
+        - `set_output_ports(names: List[str])`: Set the names of the output ports.
+
+    Available signals:
+        - `connections_changed(outputs_to_inputs: dict[str, list[str]], inputs_to_outputs: dict[str, list[str]])`: 
+            Emitted when the connections are changed (as described above).
+    """
+
+    connections_changed = Signal(dict, dict)  # Signal to notify about connection changes
+
+    def __init__(self, parent=None, output_port_names:list[str]|None=None, input_port_names:list[str]|None=None):
+        """Initialize the RoutingMatrix class."""
+        super().__init__(parent)
+
+        # First widget is the routing table
+        self.routing_table = RoutingTable(output_port_names=output_port_names, input_port_names=input_port_names)
+        self.routing_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.addWidget(self.routing_table)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.routing_table.connections_changed.connect(self.handle_connections_changed)
+
+        # Second widget is a label indicating no input/output ports
+        self.ports_missing_label = QLabel("No input and/or output ports available.")
+        self.ports_missing_widget = QWidget()
+        self.ports_missing_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.ports_missing_widget.setLayout(QHBoxLayout())
+        self.ports_missing_widget.layout().addWidget(self.ports_missing_label)
+        self.ports_missing_widget.layout().setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.addWidget(self.ports_missing_widget)
+
+        self._show_table_or_label()
+
+
+    def _show_table_or_label(self):
+        """Show the table or the label based on the current input and output ports."""
+        num_input_ports = len(self.routing_table.input_port_names)
+        num_output_ports = len(self.routing_table.output_port_names)
+        if num_input_ports > 0 and num_output_ports > 0:
+            self.setCurrentWidget(self.routing_table)
+        else:
+            if num_input_ports > 0 and num_output_ports == 0:
+                self.ports_missing_label.setText("No output ports available.")
+            elif num_input_ports == 0 and num_output_ports > 0:
+                self.ports_missing_label.setText("No input ports available.")
+            else:
+                self.ports_missing_label.setText("No input and/or output ports available.")
+            self.setCurrentWidget(self.ports_missing_widget)
+
+
+    def clear(self, keep_internal_bookkeeping:bool=True):
+        """Clear the routing matrix.
+        
+        If `keep_internal_bookkeeping` is True, the internal bookkeeping
+        dictionary is not cleared, allowing the restoration of previously
+        established connections. If False, the internal bookkeeping is cleared
+        and the routing matrix is reset to an empty state.
+
+        The `connections_changed` signal is emitted with the current state of
+        the `outputs_to_inputs` and `inputs_to_outputs` dictionaries, which will
+        be empty after clearing the routing table.
+        """
+        logger.debug("Clearing RoutingMatrix")
+        self.routing_table.clear(keep_internal_bookkeeping)
+        self.setCurrentWidget(self.ports_missing_widget)
+
+
+    def handle_connections_changed(self, outputs_to_inputs, inputs_to_outputs):
+        """Handle the connections changed signal from the routing table."""
+        logger.debug("Connections changed in RoutingMatrix")
+        self.connections_changed.emit(outputs_to_inputs, inputs_to_outputs)
+
+
+    def select_all(self):
+        """Select all checkboxes in the routing table."""
+        logger.debug("Selecting all checkboxes in RoutingMatrix")
+        self.routing_table.select_all()
+
+
+    def set_input_ports(self, names:list[str], emit_signal:bool=True):
+        """Set the names of the input ports in the routing table.
+        
+        By default, the `emit_signal` parameter is set to True, which means that
+        the `connections_changed` signal will be emitted after setting the input
+        ports. If `emit_signal` is set to False, the signal will not be emitted.
+        """
+        logger.debug("Setting input ports in RoutingMatrix: %s", names)
+        self.routing_table.set_input_ports(names, emit_signal)
+        self._show_table_or_label()
+
+
+    def set_output_ports(self, names:list[str], emit_signal:bool=True):
+        """Set the names of the output ports in the routing table.
+        
+        By default, the `emit_signal` parameter is set to True, which means that
+        the `connections_changed` signal will be emitted after setting the output
+        ports. If `emit_signal` is set to False, the signal will not be emitted.
+        """
+        logger.debug("Setting output ports in RoutingMatrix: %s", names)
+        self.routing_table.set_output_ports(names, emit_signal)
+        self._show_table_or_label()
+
+
+    def unselect_all(self):
+        """Unselect all checkboxes in the routing table."""
+        logger.debug("Unselecting all checkboxes in RoutingMatrix")
+        self.routing_table.unselect_all()
+
+
 if __name__ == '__main__':
     import sys
     from PySide6.QtWidgets import QApplication, QPushButton
@@ -455,16 +615,16 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     widget = QWidget()
-    widget.setWindowTitle("Routing Matrix Example")
+    widget.setWindowTitle("RoutingTable Example")
     output_port_names = ['Output 1', 'Output 2', 'Output 3', 'Output 4']
     input_port_names = ['Input 1', 'Input 2', 'Input 3']
-    routing_matrix = RoutingMatrix(output_port_names=output_port_names, input_port_names=input_port_names)
-    routing_matrix.connections_changed.connect(
+    routing_table = RoutingTable(output_port_names=output_port_names, input_port_names=input_port_names)
+    routing_table.connections_changed.connect(
         lambda outputs, inputs: logger.debug("Connections changed:\n  Outputs to Inputs: %s\n  Inputs to Outputs: %s", outputs, inputs)
     )
     # routing_matrix.show()
     l = QHBoxLayout()
-    l.addWidget(routing_matrix)
+    l.addWidget(routing_table)
     l.setContentsMargins(0, 0, 0, 0)
     frame = QFrame()
     frame.setFrameShape(QFrame.Shape.Box)
@@ -480,10 +640,10 @@ if __name__ == '__main__':
     layout.addItem(spacer_right, 1, 2, 1, 1)
     layout.addWidget(frame, 1, 1, 1, 1)
     button = QPushButton("Configuration 1")
-    button.clicked.connect(lambda: routing_matrix.set_output_ports(['Output 1', 'Output *']))
+    button.clicked.connect(lambda: routing_table.set_output_ports(['Output 1', 'Output *']))
     layout.addWidget(button, 3, 1, 1, 1)
     button = QPushButton("Configuration 2")
-    button.clicked.connect(lambda: routing_matrix.set_output_ports(['Output 1', 'Output 2', 'Output 3', 'Output 4']))
+    button.clicked.connect(lambda: routing_table.set_output_ports(['Output 1', 'Output 2', 'Output 3', 'Output 4']))
     layout.addWidget(button, 4, 1, 1, 1)
     widget.setLayout(layout)
     widget.resize(800, 600)
@@ -491,5 +651,12 @@ if __name__ == '__main__':
 
     m = RoutingMatrix(input_port_names=['Input 1', 'Input 2', 'Input 3'], output_port_names=[])
     m.show()
+
+    routing_matrix = RoutingMatrix(output_port_names=output_port_names, input_port_names=input_port_names)
+    routing_matrix.setWindowTitle("Routing Matrix Example")
+    routing_matrix.connections_changed.connect(
+        lambda outputs, inputs: logger.debug("Routing Matrix Connections changed:\n  Outputs to Inputs: %s\n  Inputs to Outputs: %s", outputs, inputs)
+    )
+    routing_matrix.show()
 
     sys.exit(app.exec())

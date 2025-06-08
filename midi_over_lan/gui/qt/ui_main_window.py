@@ -216,9 +216,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.groupBox_RoutingMatrix = QGroupBox(self.tab_IncomingTraffic)
         self.groupBox_RoutingMatrix.setObjectName(u"groupBox_RoutingMatrix")
-        self.verticalLayout_5 = QVBoxLayout(self.groupBox_RoutingMatrix)
-        self.verticalLayout_5.setObjectName(u"verticalLayout_5")
-        self.gridLayout_3 = QGridLayout()
+        self.gridLayout_3 = QGridLayout(self.groupBox_RoutingMatrix)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
         self.frame_HorizontalHeader = QFrame(self.groupBox_RoutingMatrix)
         self.frame_HorizontalHeader.setObjectName(u"frame_HorizontalHeader")
@@ -273,13 +271,13 @@ class Ui_MainWindow(object):
 
         self.gridLayout_3.addWidget(self.frame_VerticalHeader, 1, 0, 1, 1)
 
-        self.tableWidget_RoutingMatrix = RoutingMatrix(self.groupBox_RoutingMatrix)
-        self.tableWidget_RoutingMatrix.setObjectName(u"tableWidget_RoutingMatrix")
+        self.stackedWidget_RoutingMatrix = RoutingMatrix(self.groupBox_RoutingMatrix)
+        self.stackedWidget_RoutingMatrix.setObjectName(u"stackedWidget_RoutingMatrix")
+        self.stackedWidgetPage1 = QWidget()
+        self.stackedWidgetPage1.setObjectName(u"stackedWidgetPage1")
+        self.stackedWidget_RoutingMatrix.addWidget(self.stackedWidgetPage1)
 
-        self.gridLayout_3.addWidget(self.tableWidget_RoutingMatrix, 1, 1, 1, 1)
-
-
-        self.verticalLayout_5.addLayout(self.gridLayout_3)
+        self.gridLayout_3.addWidget(self.stackedWidget_RoutingMatrix, 1, 1, 1, 1)
 
         self.horizontalLayout_3 = QHBoxLayout()
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
@@ -308,7 +306,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.addItem(self.horizontalSpacer_3)
 
 
-        self.verticalLayout_5.addLayout(self.horizontalLayout_3)
+        self.gridLayout_3.addLayout(self.horizontalLayout_3, 2, 0, 1, 2)
 
 
         self.verticalLayout_2.addWidget(self.groupBox_RoutingMatrix)
@@ -386,8 +384,7 @@ class Ui_MainWindow(object):
         QWidget.setTabOrder(self.checkBox_OutgoingTraffic_IgnoreMidiClock, self.pushButton_OutgoingTraffic_Restart)
         QWidget.setTabOrder(self.pushButton_OutgoingTraffic_Restart, self.pushButton_OutgoingTraffic_PauseResume)
         QWidget.setTabOrder(self.pushButton_OutgoingTraffic_PauseResume, self.tabWidget)
-        QWidget.setTabOrder(self.tabWidget, self.tableWidget_RoutingMatrix)
-        QWidget.setTabOrder(self.tableWidget_RoutingMatrix, self.pushButton_RoutingMatrix_SelectAll)
+        QWidget.setTabOrder(self.tabWidget, self.pushButton_RoutingMatrix_SelectAll)
         QWidget.setTabOrder(self.pushButton_RoutingMatrix_SelectAll, self.pushButton_RoutingMatrix_UnselectAll)
         QWidget.setTabOrder(self.pushButton_RoutingMatrix_UnselectAll, self.pushButton_RoutingMatrix_Refresh)
         QWidget.setTabOrder(self.pushButton_RoutingMatrix_Refresh, self.pushButton_RoutingMatrix_Clear)
@@ -418,7 +415,7 @@ class Ui_MainWindow(object):
         self.action_Preferences.setToolTip(QCoreApplication.translate("MainWindow", u"Preferences", None))
 #endif // QT_CONFIG(tooltip)
         self.actionShow_Debug_Messages.setText(QCoreApplication.translate("MainWindow", u"Show &Debug Messages", None))
-        self.groupBox_LocalInputDevices.setTitle(QCoreApplication.translate("MainWindow", u"Local Input Devices", None))
+        self.groupBox_LocalInputDevices.setTitle(QCoreApplication.translate("MainWindow", u"Local MIDI Devices", None))
         ___qtablewidgetitem = self.tableWidget_LocalInputPorts.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("MainWindow", u"Device Name", None));
         ___qtablewidgetitem1 = self.tableWidget_LocalInputPorts.horizontalHeaderItem(1)

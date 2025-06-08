@@ -32,11 +32,10 @@ from typing import List, Tuple
 import mido
 from PySide6.QtCore import Qt, QTimerEvent
 from PySide6.QtGui import QColor, QKeySequence, QShortcut
-from PySide6.QtWidgets import QHeaderView, QLabel, QMainWindow, QMessageBox, QTableWidgetItem, QVBoxLayout
+from PySide6.QtWidgets import QHeaderView, QLabel, QMainWindow, QMessageBox, QTableWidgetItem
 
 from midi_over_lan.worker_messages import Command, CommandMessage, Information, InfoMessage
 from ui_main_window import Ui_MainWindow
-from routing_matrix import RoutingMatrix
 from line_chart import LineChart
 from version import VERSION
 from debug_messages_dialog import DebugMessagesDialog, LoggingHandler
@@ -111,8 +110,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableWidget_LocalInputPorts.itemChanged.connect(self.update_network_names)
 
         # Set up routing matrix.
-        # self.tableWidget_RoutingMatrix.connections_changed.connect(lambda outputs, inputs: logger.debug("Connections changed:\n  Outputs to Inputs: %s\n  Inputs to Outputs: %s", outputs, inputs))
-        self.tableWidget_RoutingMatrix.connections_changed.connect(self.routing_matrix_connections_changed)
+        self.stackedWidget_RoutingMatrix.connections_changed.connect(self.routing_matrix_connections_changed)
 
         # Connect the GUI elements to the functions.
         self.pushButton_LocalInputPorts_SelectAll.clicked.connect(self.select_all_input_ports)
@@ -121,9 +119,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.pushButton_OutgoingTraffic_Restart.clicked.connect(self.restart_sending_process)
         self.pushButton_OutgoingTraffic_PauseResume.clicked.connect(self.pause_and_resume_sending_process)
         self.checkBox_OutgoingTraffic_IgnoreMidiClock.stateChanged.connect(self.update_midi_clock_handling)
-        self.pushButton_RoutingMatrix_Clear.clicked.connect(self.tableWidget_RoutingMatrix.clear)
-        self.pushButton_RoutingMatrix_SelectAll.clicked.connect(self.tableWidget_RoutingMatrix.select_all)
-        self.pushButton_RoutingMatrix_UnselectAll.clicked.connect(self.tableWidget_RoutingMatrix.unselect_all)
+        self.pushButton_RoutingMatrix_Clear.clicked.connect(self.stackedWidget_RoutingMatrix.clear)
+        self.pushButton_RoutingMatrix_SelectAll.clicked.connect(self.stackedWidget_RoutingMatrix.select_all)
+        self.pushButton_RoutingMatrix_UnselectAll.clicked.connect(self.stackedWidget_RoutingMatrix.unselect_all)
         self.pushButton_RoutingMatrix_Refresh.clicked.connect(self.refresh_routing_matrix)
 
         # Set up the dialogs (preferences, debug messages dialog, etc.) now, as they are referenced below.
@@ -250,17 +248,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """Update/refresh the routing matrix."""
         logger.debug('Refresh/update the routing matrix.')
         self.refresh_output_ports()
-        remote_device_names = {'No remote devices available'}
+        remote_device_names = set()
         for device_names in self.remote_midi_devices.values():
             for device_name in device_names:
                 remote_device_names.add(device_name)
-        if len(remote_device_names) > 2:
-            remote_device_names.remove('No remote devices available')
         # Set up the routing matrix.
         # Note: Outputs are routed to inputs: routing matrix's output port (= remote/network device) -> routing matrix's input port (= local output device)
-        self.tableWidget_RoutingMatrix.clear()
-        self.tableWidget_RoutingMatrix.set_output_ports(list(remote_device_names))
-        self.tableWidget_RoutingMatrix.set_input_ports(self.output_ports)
+        self.stackedWidget_RoutingMatrix.clear()
+        self.stackedWidget_RoutingMatrix.set_output_ports(list(remote_device_names))
+        self.stackedWidget_RoutingMatrix.set_input_ports(self.output_ports)
 
 
     def restart_sending_process(self):
