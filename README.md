@@ -6,19 +6,46 @@ MIDI over LAN (protocol, Python library, GUI client, ...)
 
 ## Overview
 
-MIDI-over-LAN is a Python library that defines and implements a protocol for sending MIDI messages over a network. The project includes sample programs to demonstrate its usage.
+MIDI-over-LAN is a Python library that defines and implements a protocol for sending MIDI messages over a network. The project includes sample programs to demonstrate its usage as well as a fully-fledged GUI client.
 
 
 
 ## Features
 
-- Sends MIDI messages over the network using UDP packets (connectionless protocol).
-- Includes raw MIDI data, sending host information, and original MIDI device names in the packets.
-- Allows for computing round trip times between hosts using hello packages.
-- Allows for filtering MIDI data based on device names.
-- GUI client for selecting MIDI devices and output ports (planned feature).
+### Protocol
 
-![GUI mockup](./gui_mockup.png "MIDI over LAN GUI")
+- Sends MIDI messages over the network using UDP packets (connectionless
+  protocol).
+- Low latency protocol and thus real-time capable.
+- Zero-configuration on the end-user side.
+- Round-trip times less than a millisecond are possible (even in Python). Higher
+  round-trip times measured in the current implementation often stem from the
+  limitation of the thread scheduler of the underlying operating system. Modern
+  operating systems often have resolutions in the range of 1 ms (Linux, Windows
+  11) but the resolution can be up to 10 ms - 15 ms (Windows 10).
+- Hosts see all MIDI messages of every MIDI over LAN client; filtering is
+  done in the application (see GUI client).
+- The network MIDI messages include the raw MIDI data, the sending host, and the
+  MIDI device names which allows for easy filtering.
+- The protocol support computing round-trip times between hosts using hello
+  packets.
+
+
+### GUI-Client
+
+- Auto-discovery of MIDI network devices (according to the MIDI over LAN
+  protocol).
+- Only user-selected local MIDI devices are sent into the network.
+- Routing matrix for mapping network MIDI devices to local MIDI output ports.
+- Loopback network interfaces are supported which allows to route local MIDI
+  devices (i.e., local MIDI input ports to local MIDI output ports).
+- Statistics of round-trip times along with a graphical representation.
+- Debug console.
+
+<img src="./pics/GUI 01.png" alt="MIDI over LAN GUI - Outgoing Traffic" width="500">
+<img src="./pics/GUI 02.png" alt="MIDI over LAN GUI - Routing Matrix" width="500">
+<img src="./pics/GUI 03.png" alt="MIDI over LAN GUI - Statistics" width="500">
+<img src="./pics/GUI 06.png" alt="MIDI over LAN GUI - Debug Console" width="500">
 
 
 
@@ -31,6 +58,39 @@ pip install midi-over-lan
 ```
 
 **TODO:** The package still needs to be uploaded to the Python Package Index (PyPI). 
+
+#### Current installation:
+
+Installation of `pipx` and `poetry` using Python 3.12:
+
+```shell
+py.exe -3.12 -m pip install --upgrade pip
+py.exe -3.12 -m pip install --user pipx
+py.exe -3.12 -m pipx install poetry
+```
+
+You might want to put `pipx` in your search path for executable: `pipx ensure path`.
+
+Note, `poetry` might be installed in `C:\Users\<user name>\pipx\venvs\poetry\Scripts\`.
+
+
+Installation of `MIDI-over-LAN`:
+
+```shell
+git clone https://github.com/Haenisch/MIDI-over-LAN.git
+cd MIDI-over-LAN
+poetry config virtualenvs.in-project true
+poetry env use 3.12
+poetry install
+```
+
+If `poetry env use 3.12` fails, you might want to try `poetry env use C:\Users\<user>\AppData\Local\Programs\Python\Python312\python.exe` or similar with a hard-coded path to the Python 3.12 installation.
+
+Run the GUI client:
+
+```shell
+poetry run python .\midi_over_lan\gui\qt\main.py
+```
 
 
 
