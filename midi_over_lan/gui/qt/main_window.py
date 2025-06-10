@@ -94,7 +94,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.sender_paused = False
         self.receiver_paused = False
         self.input_ports: List[Tuple[bool, str, str]] = []  # List of tuples (active, device_name, network_name)
-        self.output_ports: List[str] = []
+        self.local_output_ports: List[str] = []
         self.remote_midi_devices: dict[str, set[str]] = {}  # key is remote ip address or hostname; values are the user-defined network names of the remote MIDI devices
         self.routing_connections: dict[str, set[str]] = {}  # key is the network name of the MIDI device; values are the local output port names to which the MIDI data should be sent
 
@@ -109,17 +109,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableWidget_LocalInputPorts.setSortingEnabled(False)
         self.tableWidget_LocalInputPorts.itemChanged.connect(self.update_network_names)
 
-        # Set up routing matrix.
-        self.stackedWidget_RoutingMatrix.connections_changed.connect(self.routing_matrix_connections_changed)
-
-        # Connect the GUI elements to the functions.
+        # Connect the GUI elements in the `Outgoing Traffic` tab to the functions.
         self.pushButton_LocalInputPorts_SelectAll.clicked.connect(self.select_all_input_ports)
         self.pushButton_LocalInputPorts_UnselectAll.clicked.connect(self.unselect_all_input_ports)
         self.pushButton_LocalInputPorts_Refresh.clicked.connect(self.refresh_input_ports)
         self.pushButton_OutgoingTraffic_Restart.clicked.connect(self.restart_sending_process)
         self.pushButton_OutgoingTraffic_PauseResume.clicked.connect(self.pause_and_resume_sending_process)
         self.checkBox_OutgoingTraffic_IgnoreMidiClock.stateChanged.connect(self.update_midi_clock_handling)
-        self.pushButton_RoutingMatrix_Clear.clicked.connect(self.stackedWidget_RoutingMatrix.clear)
+
+        # Set up routing matrix.
+        self.stackedWidget_RoutingMatrix.connections_changed.connect(self.routing_matrix_connections_changed)
+
+        # Connect the GUI elements in the `Incoming Traffic` tab to the functions.
+        self.pushButton_RoutingMatrix_Clear.clicked.connect(self.clear_routing_matrix)
         self.pushButton_RoutingMatrix_SelectAll.clicked.connect(self.stackedWidget_RoutingMatrix.select_all)
         self.pushButton_RoutingMatrix_UnselectAll.clicked.connect(self.stackedWidget_RoutingMatrix.unselect_all)
         self.pushButton_RoutingMatrix_Refresh.clicked.connect(self.refresh_routing_matrix)
@@ -146,6 +148,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # Determine input and output ports.
         self.refresh_input_ports()
         self.refresh_output_ports()
+        self.refresh_routing_matrix()
 
         # Process the UI message queue every second.
         self.timer = self.startTimer(1000)  # 1000 ms
@@ -174,6 +177,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             logger.info(f"Port {device_name} is already in use.")
             item.setForeground(Qt.red)
             item.setToolTip("The input port is already in use by another application.")
+
+
+    def clear_routing_matrix(self):
+        """Clear the routing matrix."""
+        logger.debug('Clearing the routing matrix.')
+        self.receiver_queue.put(CommandMessage(Command.CLEAR_STORED_REMOTE_MIDI_DEVICES))
+        self.remote_midi_devices.clear()
+        self.stackedWidget_RoutingMatrix.clear()
+        self.refresh_routing_matrix()
 
 
     def keyPressEvent(self, event):  # pylint: disable=invalid-name
@@ -218,7 +230,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     continue
                 if message.info == Information.REMOTE_MIDI_DEVICES:
                     logger.debug('Got a message update for the remote MIDI devices.')
-                    self.remote_midi_devices = message.data
+                    self.remote_midi_devices |= message.data  # merge the new remote MIDI devices with the existing ones
                     logger.debug(f"Remote MIDI devices: {self.remote_midi_devices}")
                     self.refresh_routing_matrix()
                     continue
@@ -239,24 +251,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def refresh_output_ports(self):
         """Refresh the list of internal output ports."""
         logger.debug('Refresh the list of output ports.')
-        self.output_ports.clear()
+        self.local_output_ports.clear()
         for output_port in mido.get_output_names():
-            self.output_ports.append(output_port.split(':')[0])
+            self.local_output_ports.append(output_port.split(':')[0])
 
 
     def refresh_routing_matrix(self):
         """Update/refresh the routing matrix."""
         logger.debug('Refresh/update the routing matrix.')
-        self.refresh_output_ports()
+        # Set up the routing matrix.
+        # Note: Outputs are routed (i.e., sent) to inputs:
+        #       (1) routing matrix's output port = remote/network device
+        #       (2) routing matrix's input port = local output device / local output port
+
+        # (1)
         remote_device_names = set()
         for device_names in self.remote_midi_devices.values():
             for device_name in device_names:
                 remote_device_names.add(device_name)
-        # Set up the routing matrix.
-        # Note: Outputs are routed to inputs: routing matrix's output port (= remote/network device) -> routing matrix's input port (= local output device)
-        self.stackedWidget_RoutingMatrix.clear()
         self.stackedWidget_RoutingMatrix.set_output_ports(list(remote_device_names))
-        self.stackedWidget_RoutingMatrix.set_input_ports(self.output_ports)
+
+        # (2)
+        self.refresh_output_ports()  # Ensure the local output ports are up to date.
+        self.stackedWidget_RoutingMatrix.set_input_ports(self.local_output_ports)
 
 
     def restart_sending_process(self):

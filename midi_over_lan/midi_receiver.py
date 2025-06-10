@@ -23,7 +23,7 @@ from socket import (gaierror,
                     SOL_SOCKET,
                     SO_REUSEADDR,
                     socket)
-from typing import List, Tuple
+from typing import Tuple
 
 import mido
 
@@ -87,22 +87,23 @@ class MidiReceiver(multiprocessing.Process):
                         item = self.receiver_queue.get_nowait()  # Check for new commands
                         if isinstance(item, CommandMessage):
                             match item.command:
+                                case Command.CLEAR_STORED_REMOTE_MIDI_DEVICES:
+                                    logger.debug("Clearing stored remote MIDI devices.")
+                                    self.clear_stored_remote_midi_devices()
+                                case Command.PAUSE:
+                                    logger.debug("Pausing.")
+                                    self.paused = True
                                 case Command.RESTART:
                                     logger.debug("Restarting.")
                                     self.running = False
                                     self.restart = True
                                     break
-                                case Command.PAUSE:
-                                    logger.debug("Pausing.")
-                                    self.paused = True
                                 case Command.RESUME:
-                                    logger.debug("Resuming.   *** NOT YET IMPLEMENTED ***")
+                                    logger.debug("Resuming.")
+                                    self.paused = False
                                 case Command.STOP:
                                     logger.debug("Stopping.")
                                     self.running = False
-                                case Command.SET_MIDI_OUTPUT_PORTS:
-                                    logger.debug(f"Setting MIDI input ports '{item.data}'.   *** NOT YET IMPLEMENTED ***")
-                                    # self.set_midi_output_ports(item)  # TODO: Maybe remove this command?
                                 case Command.SET_NETWORK_INTERFACE:
                                     logger.debug(f"Setting network interface '{item.data}'.")
                                     self.set_network_interface(item)
@@ -162,6 +163,12 @@ class MidiReceiver(multiprocessing.Process):
             self.received_hello_reply_packets.append((packet, remote_ip))  # pylint: disable=no-value-for-parameter
         else:
             logger.warning(f"Received unknown packet format from {remote_ip} of type {type(packet)}.")
+
+
+    def clear_stored_remote_midi_devices(self):
+        """Clear the stored remote MIDI devices."""
+        self.remote_midi_devices.clear()
+        self.ui_queue.put(InfoMessage(Information.REMOTE_MIDI_DEVICES, self.remote_midi_devices))
 
 
     def get_midi_output_ports(self):

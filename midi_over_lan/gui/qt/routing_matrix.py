@@ -18,7 +18,7 @@ from PySide6.QtGui import QColor, QPainter, QTransform
 from PySide6.QtWidgets import QCheckBox, QHBoxLayout, QHeaderView, QLabel, QSizePolicy, QStackedWidget, QTableWidget, QWidget
 
 
-logger = logging.getLogger("midi_over_lan.gui")
+logger = logging.getLogger("midi_over_lan.gui.routing_matrix")
 
 
 class AngledHeader(QHeaderView):
@@ -521,6 +521,7 @@ class RoutingMatrix(QStackedWidget):
 
         # Second widget is a label indicating no input/output ports
         self.ports_missing_label = QLabel("No input and/or output ports available.")
+        self.ports_missing_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.ports_missing_widget = QWidget()
         self.ports_missing_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.ports_missing_widget.setLayout(QHBoxLayout())
@@ -528,10 +529,10 @@ class RoutingMatrix(QStackedWidget):
         self.ports_missing_widget.layout().setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.addWidget(self.ports_missing_widget)
 
-        self._show_table_or_label()
+        self._update_displayed_widget()
 
 
-    def _show_table_or_label(self):
+    def _update_displayed_widget(self):
         """Show the table or the label based on the current input and output ports."""
         num_input_ports = len(self.routing_table.input_port_names)
         num_output_ports = len(self.routing_table.output_port_names)
@@ -539,11 +540,26 @@ class RoutingMatrix(QStackedWidget):
             self.setCurrentWidget(self.routing_table)
         else:
             if num_input_ports > 0 and num_output_ports == 0:
-                self.ports_missing_label.setText("No output ports available.")
+                self.ports_missing_label.setText(
+                    "No network devices (output ports) available.\n" \
+                    "It may take a few seconds to discover any devices.\n\n\n" \
+                    "Note: If you select local MIDI devices in the `Outgoing Traffic`\n" \
+                    "tab and activate the loopback option in the settings, these\n" \
+                    "devices will be listed as network devices in the routing matrix."
+                )
             elif num_input_ports == 0 and num_output_ports > 0:
-                self.ports_missing_label.setText("No input ports available.")
+                self.ports_missing_label.setText(
+                    "No local MIDI devices (input ports) available.\n" \
+                    "Are any MIDI devices connected to your computer?"
+                )
             else:
-                self.ports_missing_label.setText("No input and/or output ports available.")
+                self.ports_missing_label.setText(
+                    "No input and/or output ports available.\n" \
+                    "It may take a few seconds to discover any devices.\n\n\n" \
+                    "Note: If you select local MIDI devices in the `Outgoing Traffic`\n" \
+                    "tab and activate the loopback option in the settings, these\n" \
+                    "devices will be listed as network devices in the routing matrix."
+                )
             self.setCurrentWidget(self.ports_missing_widget)
 
 
@@ -561,7 +577,7 @@ class RoutingMatrix(QStackedWidget):
         """
         logger.debug("Clearing RoutingMatrix")
         self.routing_table.clear(keep_internal_bookkeeping)
-        self.setCurrentWidget(self.ports_missing_widget)
+        self._update_displayed_widget()
 
 
     def handle_connections_changed(self, outputs_to_inputs, inputs_to_outputs):
@@ -585,7 +601,7 @@ class RoutingMatrix(QStackedWidget):
         """
         logger.debug("Setting input ports in RoutingMatrix: %s", names)
         self.routing_table.set_input_ports(names, emit_signal)
-        self._show_table_or_label()
+        self._update_displayed_widget()
 
 
     def set_output_ports(self, names:list[str], emit_signal:bool=True):
@@ -597,7 +613,7 @@ class RoutingMatrix(QStackedWidget):
         """
         logger.debug("Setting output ports in RoutingMatrix: %s", names)
         self.routing_table.set_output_ports(names, emit_signal)
-        self._show_table_or_label()
+        self._update_displayed_widget()
 
 
     def unselect_all(self):

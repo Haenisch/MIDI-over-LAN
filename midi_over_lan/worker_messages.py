@@ -5,7 +5,6 @@
 
 """Collection of messages sent between the GUI and the worker processes."""
 
-from abc import ABC
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any
@@ -16,47 +15,78 @@ class Command(Enum):
 
     Available commands:
 
+        CLEAR_STORED_REMOTE_MIDI_DEVICES:
+            objective:  Clear the list of remote MIDI devices that the receiving
+                        worker process has discovered so far. The command is
+                        sent by the UI client to the receiving worker process.
+                 data:  None
+                 from:  The UI client.
+                   to:  The receiving worker process.
+
+
         RESTART:
             objective:  Restart the worker process.
                  data:  None
+                 from:  The UI client.
+                   to:  The sending worker process.
+
 
         PAUSE:
             objective:  Pause the worker process.
                  data:  None
+                 from:  The UI client.
+                   to:  The sending worker process.
+
 
         RESUME:
             objective:  Resume the worker process.
                  data:  None
+                 from:  The UI client.
+                   to:  The sending worker process.
+
 
         STOP:
             objective:  Stop the worker process.
                  data:  None
+                 from:  The UI client.
+                   to:  The sending worker process.
+
 
         SET_MIDI_INPUT_PORTS:
             objective:  Set the list of MIDI input ports to be sent.
                  data:  list of tuples (input port name, network name)
+                 from:  The UI client.
+                   to:  The sending worker process.
 
-        SET_MIDI_OUTPUT_PORTS:
-            objective:  Set the list of MIDI output ports to be bound.
-                 data:  list of tuples (network name, output port name)
 
         SET_NETWORK_INTERFACE:
             objective:  Set the network interface to be used in the worker
                         processes.
                  data:  str or None. See below for more information.
+                 from:  The UI client.
+                   to:  The sending and receiving worker processes.
+
 
         SET_ENABLE_LOOPBACK_INTERFACE:
             objective:  Enable or disable the loopback interface.
                  data:  bool
+                 from:  The UI client.
+                   to:  The sending worker process.
+
 
         SET_IGNORE_MIDI_CLOCK:
             objective:  Ignore MIDI clock messages (if data is set to True).
                  data:  bool
+                 from:  The UI client.
+                   to:  The sending worker process.
+
 
         SET_SAVE_CPU_TIME:
             objective:  If enabled, save CPU time with the trade-off of a higher
                         latency.
                  data:  bool
+                 from:  The UI client.
+                   to:  The sending and receiving worker processes.
 
     Note:
     
@@ -77,12 +107,13 @@ class Command(Enum):
           for the network interface. In this case, the worker process binds to
           all available network interfaces.
     """
+
+    CLEAR_STORED_REMOTE_MIDI_DEVICES = auto()
     RESTART = auto()
     PAUSE = auto()
     RESUME = auto()
     STOP = auto()
     SET_MIDI_INPUT_PORTS = auto()
-    SET_MIDI_OUTPUT_PORTS = auto()
     SET_NETWORK_INTERFACE = auto()
     SET_ENABLE_LOOPBACK_INTERFACE = auto()
     SET_IGNORE_MIDI_CLOCK = auto()
@@ -97,8 +128,13 @@ class Information(Enum):
         HELLO_PACKET_INFO:
             objective:  Provide information about the recently sent hello packet.
                         The hello packet has been created by the sending worker
-                        process and has been sent to the network.
+                        process and has been sent to the network. This information
+                        is sent by the sending worker process to the receiving
+                        worker process.
                  data:  tuple (packet id, timestamp as provided by perf_counter)
+                 from:  The sending worker process.
+                   to:  The receiving worker process.
+
 
         RECEIVED_HELLO_PACKET:
             objective:  Provide information about a just received hello reply
@@ -108,6 +144,9 @@ class Information(Enum):
                         corresponding hello reply packet.
                  data:  tuple (IP address of remote host, packet id, timestamp
                         as provided by perf_counter)
+                 from:  The receiving worker process.
+                   to:  The sending worker process.
+
 
         REMOTE_MIDI_DEVICES:
             objective:  Provide information about the remote MIDI devices
@@ -115,6 +154,9 @@ class Information(Enum):
                  data:  dict[str, set[str]] where the key is the IP address or
                         hostname of the remote host and the values are the
                         network names of the remote MIDI devices.
+                 from:  The receiving worker process.
+                   to:  The UI client.
+
 
         ROUND_TRIP_TIMES:
             objective:  Provide information about the round trip times between
@@ -125,15 +167,20 @@ class Information(Enum):
                         of the remote host and the value is a deque of round
                         trip times (in seconds) for the last 100 hello packets
                         sent to the remote host.
+                 from:  The receiving worker process.
+                   to:  The UI client.
 
 
         ROUTING_INFORMATION:
             objective:  Provide information about which remote MIDI device shall
-                        be mapped to which local MIDI output port.
+                        be mapped to which local MIDI output port. The receiving
+                        worker process opens the local MIDI output ports by himself.
                  data:  dict[str, set[str]] where the key is the network name
                         of the remote MIDI device and the value is a set of
                         local MIDI output port names to which the remote MIDI
                         device is bound.
+                 from:  The UI client.
+                   to:  The receiving worker process.
 """
 
     HELLO_PACKET_INFO = auto()

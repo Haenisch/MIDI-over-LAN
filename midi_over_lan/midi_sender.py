@@ -3,8 +3,6 @@
 # It is licensed under the GNU Lesser General Public License v3.0.
 # See the LICENSE file for more details.
 
-# TODO: Send warning and error messages to the GUI client
-
 """Worker process for sending MIDI over LAN data (MIDI messages, hello packets, etc.)."""
 
 import logging
@@ -160,10 +158,10 @@ class MidiSender(multiprocessing.Process):
 
 
     def send_hello_packet(self):
-        """Send every 10 seconds a hello packet to the multicast group."""
+        """Send every 5 seconds a hello packet to the multicast group."""
         now = time.time()
         timestamp = self.timestamp_of_last_hello
-        if (timestamp is None) or (now - timestamp >= 1):  # 10 seconds
+        if (timestamp is None) or (now - timestamp >= 5):
             logger.debug("Sending 'Hello' packet.")
             self.timestamp_of_last_hello = now
             # A 'Hello' packet may include a list of local MIDI devices whose
@@ -263,7 +261,6 @@ class MidiSender(multiprocessing.Process):
                 self.opened_input_ports.append((port, device_name))
             except OSError as error:
                 logger.error(f"Could not open MIDI input port '{input_port_name}': {error}")
-                # TODO: Send error message to the GUI client
 
 
     def set_network_interface(self, item: CommandMessage):
