@@ -35,6 +35,13 @@ automatically discovered by the GUI client.
 # are sent to a log queue, which is processed in a separate thread, thus allowing
 # the worker processes to log messages much quicker and to reduce the latency.
 
+# Note: All multiprocessing-related code -- including the creation of
+#       multiprocessing.Queue() objects -- must be created in the main function
+#       which is guarded by the "if __name__ == '__main__'" block. This is
+#       necessary when packaging the application with PyInstaller or similar
+#       tools, as it ensures that the multiprocessing module can correctly
+#       spawn new processes.
+
 
 # pylint: disable=wrong-import-order
 # pylint: disable=wrong-import-position
@@ -50,22 +57,36 @@ from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
 from midi_over_lan.midi_sender import MidiSender
 from midi_over_lan.midi_receiver import MidiReceiver
 from midi_over_lan.worker_messages import Command, CommandMessage
-from logging_setup import log_queue, start_logger_thread, stop_logger_thread
+from logging_setup import start_logger_thread, stop_logger_thread
 from main_window import MainWindow
 
-
-# Create queues for communication between the GUI and the worker processes
-sender_queue = multiprocessing.Queue()  # Queue for sending commands to the sender process
-receiver_queue = multiprocessing.Queue()  # Queue for sending commands to the receiver process
-gui_queue = multiprocessing.Queue()  # Queue for receiving results from the sender and receiver processes
+try:
+    import mido
+    import mido.backends.rtmidi  # pylint: disable=unused-import
+    mido.set_backend('mido.backends.rtmidi', load=True)
+except Exception:  # pylint: disable=broad-except
+    print("Please install the required dependencies by running 'pip install python-rtmidi mido[ports-rtmidi]' in your shell.")
+    sys.exit(1)
 
 
 def main():
     """Main function."""
+
+    # Create a queue for the log messages. The log_queue has a maximum size of
+    # 10000 messages. If the queue is full, the worker processes will block
+    # until the main process has processed some log messages. Thus, the
+    # logger_thread should be created as early as possible.
+    log_queue = multiprocessing.Queue(maxsize=10000)
+
     # Set up the logging system
-    start_logger_thread()
+    start_logger_thread(log_queue)
     logger = logging.getLogger('midi_over_lan')
     logger.setLevel(logging.DEBUG)
+
+    # Create queues for communication between the GUI and the worker processes.
+    sender_queue = multiprocessing.Queue()
+    receiver_queue = multiprocessing.Queue()
+    gui_queue = multiprocessing.Queue()
 
     # Start the sender and receiver processes
     logger.debug('Start the sending process.')
@@ -88,8 +109,8 @@ def main():
     receiver_queue.put(CommandMessage(Command.STOP))
     sender.join()
     receiver.join()
-    stop_logger_thread()
+    stop_logger_thread(log_queue)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

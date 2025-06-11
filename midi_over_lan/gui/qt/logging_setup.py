@@ -19,17 +19,11 @@ import logging.handlers
 import multiprocessing
 import os
 import threading
+import warnings
 
 import midi_over_lan.logging_setup
 
 logger_thread = None
-
-# Create a queue for the log messages. The log_queue has a maximum size of 10000
-# messages. If the queue is full, the worker processes will block until the main
-# process has processed some log messages. Thus, the logger_thread should be
-# created as early as possible.
-
-log_queue = multiprocessing.Queue(maxsize=10000)
 
 
 class JsonLinesFormatter(logging.Formatter):
@@ -77,26 +71,29 @@ def activate_logging_jsonl():
     root.addHandler(jsonl_handler)
 
 
-def start_logger_thread():
+def start_logger_thread(log_queue:multiprocessing.Queue):
     """Start the logger thread.
 
-    This function starts a logger thread that processes log messages from the
-    log queue. The logger thread is a separate thread that should run in the
-    main process. It is responsible for processing log messages sent by the
-    worker processes in the background. If the queue is full, the worker
-    processes will block until the logger thread has processed some log
-    messages. This is why the function should be called as early as possible.
+    This function starts a logger thread that processes log messages from a
+    log queue - a multiprocessing.Queue which is used to communicate log
+    messages between worker processes and the main process. The queue must be
+    created in main process and then be passed to this function. The logger
+    thread should also run in the main process.
+
+    If the queue is full, the worker processes will block until the logger thread
+    has processed some log messages. This is why the function should be called
+    as early as possible.
 
     The worker processes do call the init_logger() function from the
     midi_over_lan.logging_setup module to set up the logger. This function
-    expects a log queue as an argument. This log queue is created in this module
-    and must be passed to the init_logger() function.
+    expects a log queue as an argument; it is the same queue that is passed to
+    this function.
     
     The logger is named 'midi_over_lan'.
 
-    This function must be called in the main process and may only be called
-    once. Before terminating the main process, the logger thread must be stopped
-    by calling stop_logger_thread().
+    Note: This function must be called in the main process and may only be
+          called once. Before terminating the main process, the logger thread
+          must be stopped by calling stop_logger_thread().
     """
     global logger_thread  # pylint: disable=global-statement
     logger_thread = threading.Thread(target=midi_over_lan.logging_setup.logger_thread, args=(log_queue,))
@@ -104,7 +101,14 @@ def start_logger_thread():
     return logger_thread
 
 
-def stop_logger_thread() -> None:
-    """Stop the logger thread."""
+def stop_logger_thread(log_queue:multiprocessing.Queue) -> None:
+    """Stop the logger thread.
+    
+    Note, the log queue passed to this function must be the same queue that was
+    passed to the start_logger_thread() function.
+    """
     log_queue.put(None)  # Stop the logger thread (by protocol) by putting a None object into the queue.
-    logger_thread.join()
+    if logger_thread:
+        logger_thread.join()
+    else:
+        warnings.warn("Logger thread was not started. Nothing to stop.")
