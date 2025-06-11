@@ -48,8 +48,13 @@ automatically discovered by the GUI client.
 # pylint: disable=line-too-long
 
 
-import logging
+# Ensure that the multiprocessing module is initialized correctly when using
+# PyInstaller or similar tools. This is necessary to avoid issues with process
+# spawning on Windows and macOS.
 import multiprocessing
+multiprocessing.freeze_support()
+
+import logging
 import sys
 
 from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
