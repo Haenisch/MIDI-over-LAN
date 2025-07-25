@@ -7,6 +7,7 @@
 
 import logging
 import multiprocessing
+import platform
 import queue
 import re
 import struct
@@ -192,6 +193,8 @@ class MidiReceiver(multiprocessing.Process):
                 logger.error(f"Failed to open MIDI output port '{port_name}'. It is probably already in use.")
                 continue
             self.midi_output_ports[port_name] = outport
+        if len(self.midi_output_ports) == 0:
+            logger.warning("No MIDI output ports available.")
 
 
     def process_hello_packets(self):
@@ -321,7 +324,7 @@ class MidiReceiver(multiprocessing.Process):
         # Allow multiple sockets to use the same port
         self.sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
-        if not self.network_interface:
+        if not self.network_interface or platform.system().lower() == 'linux':
             # Bind to all interfaces
             logger.debug("Binding to all network interfaces.")
             self.sock.bind(('', MULTICAST_PORT_NUMBER))

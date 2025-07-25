@@ -22,6 +22,7 @@
 
 import logging
 import multiprocessing
+import platform
 import time
 from collections import deque
 from functools import cache
@@ -244,7 +245,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.tableWidget_LocalInputPorts.clearContents()
         self.input_ports = []
         for input_port in mido.get_input_names():
-            input_port = input_port.split(':')[0]
+            if platform.system() == 'Windows':
+                input_port = input_port.split(':')[0]
             self.add_input_port(False, input_port, input_port)
 
 
